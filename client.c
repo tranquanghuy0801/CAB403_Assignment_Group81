@@ -52,9 +52,11 @@ int main(int argc, char *argv[]) {
 	 * write(socket_fd,,) and read(socket_fd,,) to send and receive messages
 	 * with the client.
 	 */
+	char buff[MAX];
 	char messages[MAX];
 	int channel_id;
 	for(;;) { 
+		bzero(buff,sizeof(buff));
 		bzero(messages, sizeof(messages)); 
 		printf("Commands: \n\
 			SUB <channelID> -- to subscribe to channel (0-255) \n\
@@ -68,19 +70,24 @@ int main(int argc, char *argv[]) {
 		scanf("%s",messages);
 		write(socket_fd, messages, sizeof(messages)); 
 		if(strcmp(messages,"SUB") == 0 || strcmp(messages,"UNSUB") == 0 ){
-			if (scanf("%d", &channel_id) < 1)
+			fgets(buff,MAX,stdin);
+			if (sscanf(buff,"%d",&channel_id) == 1)
 			{
-				continue;
+				printf("%d\n",channel_id);
+				int32_t conv = htonl(channel_id);
+				write(socket_fd,&channel_id,sizeof(channel_id));
 			}
 			else{
-				write(socket_fd, &channel_id, sizeof(channel_id)); 
+				channel_id = 265;
+				write(socket_fd,&channel_id,sizeof(channel_id));
 			}
 		}
-		if ((strncmp(messages, "BYE", 4)) == 0) { 
+		if ((strncmp(messages,"BYE", 4)) == 0) { 
 			printf("Client Exit...\n");
 			close(socket_fd); 
 			return 0;
 		} 
+		bzero(buff,sizeof(buff));
 		bzero(messages, sizeof(messages));
 		//n = 0; 
 		// while ((buff[n++] = getchar()) != '\n') 

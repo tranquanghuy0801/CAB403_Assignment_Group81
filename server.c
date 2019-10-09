@@ -288,6 +288,7 @@ void *pthread_routine(void *arg) {
 	 */
 	char messages[MAX];
 	int channel_id;
+	int32_t ret;
 	// infinite loop for chat 
 	for (;;) { 
 		bzero(messages,MAX);
@@ -295,7 +296,9 @@ void *pthread_routine(void *arg) {
 		if(strcmp(messages,"SUB")==0){
 			bzero(messages,MAX);
 			printf("Found\n");		
-			if(read(new_socket_fd, &channel_id, sizeof(channel_id)) != -1){
+			//if(read(new_socket_fd,(char*)&ret, sizeof(ret)) != -1){
+			if(read(new_socket_fd,&channel_id, sizeof(channel_id)) != -1){
+				//channel_id = ntohl(ret);
 				printf("%d\n",channel_id);
 				channel_t *channel_new = (channel_t *)malloc(sizeof(channel_t));
 				if(channel_id >= 0 && channel_id <= 255 && node_find_channel(channel_list, channel_id) == NULL){
@@ -317,7 +320,7 @@ void *pthread_routine(void *arg) {
 				}
 				else
 				{
-					sprintf(messages,"Invalid channel: %d\n\n", channel_id);
+					sprintf(messages,"Invalid channel: %d\n", channel_id);
 				}
 			} 
 			else{
@@ -328,7 +331,9 @@ void *pthread_routine(void *arg) {
 		else if(strcmp(messages,"UNSUB")==0){
 			bzero(messages,MAX);
 			printf("Found\n");
-			if(read(new_socket_fd, &channel_id, sizeof(channel_id)) != -1){
+			//if(read(new_socket_fd, (char*)&ret, sizeof(ret)) != -1){
+			if(read(new_socket_fd,&channel_id, sizeof(channel_id)) != -1){
+				//channel_id = ntohl(ret);
 				printf("%d\n",channel_id);
 				if(channel_id >= 0 && channel_id <= 255  && node_find_channel(channel_list, channel_id) != NULL){
 					node_t *newhead = node_delete(channel_list, channel_id);

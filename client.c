@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
 					if(sscanf(buff,"%[^\n]%*c", send_message) == 1){
 						send_message+=3;
 						printf("%s\n",send_message);
-						write(socket_fd,send_message,sizeof(send_message));
+						write(socket_fd,send_message,1024);
 					}
 				}
 			}

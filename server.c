@@ -126,7 +126,7 @@ char *get_unread_mess(node_t *head)
 	node_t *channel_found;
 	if (head == NULL)
 	{
-		printf("Not subscrived to any channels\n");
+		sprintf(mess,"Not subscrived to any channels\n");
 	}
 	else
 	{
@@ -353,7 +353,7 @@ void *pthread_routine(void *arg) {
 			printf("Found\n");
 			if(read(new_socket_fd,&channel_id, sizeof(channel_id)) != -1){
 				printf("%d\n",channel_id);
-				if (channel_id >= 0 && channel_id <= 255 && read(new_socket_fd,send_message, sizeof(send_message)) != -1 )
+				if (channel_id >= 0 && channel_id <= 255 && read(new_socket_fd,send_message, 1024) != -1 )
 				{
 					if (node_find_channel(channel_list, channel_id) != NULL)
 					{

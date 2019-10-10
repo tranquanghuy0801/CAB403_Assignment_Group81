@@ -96,7 +96,7 @@ int main(int argc, char *argv[]) {
 		} 
 		bzero(buff,sizeof(buff));
 		bzero(messages, sizeof(messages));
-		read(socket_fd, messages, sizeof(messages)); 
+		read(socket_fd, messages, 1024); 
 		printf("From Server : %s", messages); 
 	} 
 

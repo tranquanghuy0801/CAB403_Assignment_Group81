@@ -123,6 +123,7 @@ void set_read_mess(node_t *head, int channel_id)
 char *get_unread_mess(node_t *head)
 {
 	char *mess = (char *)malloc(sizeof(char) * 1024);
+	char *res = (char *)malloc(sizeof(char) * 1024);
 	node_t *channel_found;
 	if (head == NULL)
 	{
@@ -138,13 +139,15 @@ char *get_unread_mess(node_t *head)
 				if (channel_found->channel->message->read == 0)
 				{
 					sprintf(mess, "%d:%s\n", channel_found->channel->channelID, channel_found->channel->message->text);
-					printf("%s", mess);
+					res = strcat(res,mess);
+					//printf("%s", mess);
 					channel_found->channel->message->read = 1;
 				}
 			}
 		}
 	}
-	return mess;
+	free(mess);
+	return res;
 }
 
 typedef struct pthread_arg_t {
@@ -438,7 +441,7 @@ void *pthread_routine(void *arg) {
 			bzero(messages,MAX);
 			sprintf(messages, "Cannot recognise your command\n");
 		}
-		write(new_socket_fd, messages, sizeof(messages)); 
+		write(new_socket_fd, messages,1024); 
 	} 
 	close(new_socket_fd);
 	return NULL;

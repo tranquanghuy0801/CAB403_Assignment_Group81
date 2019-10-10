@@ -120,7 +120,7 @@ void set_read_mess(node_t *head, int channel_id)
 	}
 }
 
-void get_unread_mess(node_t *head)
+char *get_unread_mess(node_t *head)
 {
 	char *mess = (char *)malloc(sizeof(char) * 1024);
 	node_t *channel_found;
@@ -144,7 +144,7 @@ void get_unread_mess(node_t *head)
 			}
 		}
 	}
-	free(mess);
+	return mess;
 }
 
 typedef struct pthread_arg_t {
@@ -288,7 +288,6 @@ void *pthread_routine(void *arg) {
 	 */
 	char messages[MAX];
 	int channel_id;
-	int32_t ret;
 	// infinite loop for chat 
 	for (;;) { 
 		bzero(messages,MAX);
@@ -296,13 +295,12 @@ void *pthread_routine(void *arg) {
 		if(strcmp(messages,"SUB")==0){
 			bzero(messages,MAX);
 			printf("Found\n");		
-			//if(read(new_socket_fd,(char*)&ret, sizeof(ret)) != -1){
 			if(read(new_socket_fd,&channel_id, sizeof(channel_id)) != -1){
-				//channel_id = ntohl(ret);
 				printf("%d\n",channel_id);
 				channel_t *channel_new = (channel_t *)malloc(sizeof(channel_t));
 				if(channel_id >= 0 && channel_id <= 255 && node_find_channel(channel_list, channel_id) == NULL){
 					if(node_find_channel(channel_list_unsub, channel_id) != NULL){
+						set_read_mess(channel_list_unsub, channel_id);
 						channel_new = node_find_channel(channel_list_unsub, channel_id)->channel;
 					}
 					else{
@@ -331,9 +329,7 @@ void *pthread_routine(void *arg) {
 		else if(strcmp(messages,"UNSUB")==0){
 			bzero(messages,MAX);
 			printf("Found\n");
-			//if(read(new_socket_fd, (char*)&ret, sizeof(ret)) != -1){
 			if(read(new_socket_fd,&channel_id, sizeof(channel_id)) != -1){
-				//channel_id = ntohl(ret);
 				printf("%d\n",channel_id);
 				if(channel_id >= 0 && channel_id <= 255  && node_find_channel(channel_list, channel_id) != NULL){
 					node_t *newhead = node_delete(channel_list, channel_id);
@@ -351,22 +347,98 @@ void *pthread_routine(void *arg) {
 				sprintf(messages,"Miss channel ID\n");
 			}
 		}
+		else if(strcmp(messages,"SEND") == 0){
+			char *send_message = malloc(sizeof(char) * 1024);
+			bzero(messages,MAX);
+			printf("Found\n");
+			if(read(new_socket_fd,&channel_id, sizeof(channel_id)) != -1){
+				printf("%d\n",channel_id);
+				if (channel_id >= 0 && channel_id <= 255 && read(new_socket_fd,send_message, sizeof(send_message)) != -1 )
+				{
+					if (node_find_channel(channel_list, channel_id) != NULL)
+					{
+						node_t *channel_send = node_find_channel(channel_list, channel_id);
+						message_t *newMess = message_add(channel_send->channel->message, send_message);
+						channel_send->channel->message = newMess;
+						channel_send->channel->numMessage++;
+					}
+					else if (node_find_channel(channel_list_unsub, channel_id) != NULL)
+					{
+						node_t *channel_send = node_find_channel(channel_list_unsub, channel_id);
+						message_t *newMess = message_add(channel_send->channel->message, send_message);
+						channel_send->channel->message = newMess;
+						channel_send->channel->numMessage++;
+					}
+					else
+					{
+						channel_t *channel_new = (channel_t *)malloc(sizeof(channel_t));
+						message_t *newMess = (message_t *)malloc(sizeof(message_t));
+						newMess->text = send_message;
+						newMess->next = NULL;
+						newMess->read = 0;
+						channel_new->channelID = channel_id;
+						channel_new->message = newMess;
+						channel_new->next_used = 0;
+						channel_new->numMessage = 1;
+						node_t *newhead = node_add(channel_list_unsub, channel_new);
+						channel_list_unsub = newhead;
+					}
+					sprintf(messages,"Send to channel %d successfully\n", channel_id);
+				}
+				else
+				{
+					sprintf(messages,"Invalid channel: %d\n", channel_id);
+				}
+			}
+			else{
+				sprintf(messages,"Miss channel ID\n");
+			}
+		}
+		else if(strcmp(messages,"NEXT") == 0){
+			bzero(messages,MAX);
+			printf("Found\n");
+			if(read(new_socket_fd,&channel_id, sizeof(channel_id)) != -1){
+				printf("%d\n",channel_id);
+				if(channel_id == 265){
+					sprintf(messages,"%s",get_unread_mess(channel_list));
+				}
+				else if(channel_id >= 0 && channel_id <= 255 && node_find_channel(channel_list, channel_id) != NULL){
+					node_t *channel_found = node_find_channel(channel_list, channel_id);
+					char *mess = (char *)malloc(sizeof(char) * 1024);
+					if (channel_found->channel->message != NULL)
+					{
+						mess = channel_found->channel->message->text;
+						channel_found->channel->message->read = 1;
+						sprintf(messages,"%s\n", mess);
+						channel_found->channel->message = channel_found->channel->message->next;
+					}
+					else
+					{
+						sprintf(messages,"No new messages\n");
+					}
+					free(mess);
+				}
+				else if (channel_id >= 0 && channel_id <= 255 && node_find_channel(channel_list, channel_id) == NULL)
+				{
+					sprintf(messages,"Not subscribed to channel %d\n", channel_id);
+				}
+				else
+				{
+					sprintf(messages,"Invalid channel: %d\n", channel_id);
+				}
+			}
+		}
+		else if(strcmp(messages,"LIVEFEED") == 0){
+
+		}
+		else if(strcmp(messages,"CHANNELS") == 0){
+
+		}
 		else{
 			bzero(messages,MAX);
 			sprintf(messages, "Cannot recognise your command\n");
 		}
 		write(new_socket_fd, messages, sizeof(messages)); 
-		// read the message from client and copy it in buffer 
-		// read(new_socket_fd, buff, sizeof(buff)); 
-		// // // print buffer which contains the client contents 
-		// printf("From client: %s\t To client : ", buff); 
-		// bzero(buff, MAX);
-		// n = 0; 
-		// // copy server message in the buffer 
-		// while ((buff[n++] = getchar()) != '\n') 
-		//     ; 
-  
-		// and send that buffer to client 
 	} 
 	close(new_socket_fd);
 	return NULL;

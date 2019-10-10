@@ -69,13 +69,20 @@ int main(int argc, char *argv[]) {
 			BYE - to exit the connection with server \n\n:");
 		scanf("%s",messages);
 		write(socket_fd, messages, sizeof(messages)); 
-		if(strcmp(messages,"SUB") == 0 || strcmp(messages,"UNSUB") == 0 ){
+		if(strcmp(messages,"SUB") == 0 || strcmp(messages,"UNSUB") == 0 || strcmp(messages,"NEXT") == 0 || strcmp(messages,"LIVEFEED") == 0 || strcmp(messages,"SEND") == 0){
 			fgets(buff,MAX,stdin);
 			if (sscanf(buff,"%d",&channel_id) == 1)
 			{
 				printf("%d\n",channel_id);
-				int32_t conv = htonl(channel_id);
 				write(socket_fd,&channel_id,sizeof(channel_id));
+				if(strcmp(messages,"SEND") == 0){
+					char *send_message = (char *)malloc(sizeof(char) * 1024);
+					if(sscanf(buff,"%[^\n]%*c", send_message) == 1){
+						send_message+=3;
+						printf("%s\n",send_message);
+						write(socket_fd,send_message,sizeof(send_message));
+					}
+				}
 			}
 			else{
 				channel_id = 265;
@@ -89,11 +96,6 @@ int main(int argc, char *argv[]) {
 		} 
 		bzero(buff,sizeof(buff));
 		bzero(messages, sizeof(messages));
-		//n = 0; 
-		// while ((buff[n++] = getchar()) != '\n') 
-		//      ; 
-		// write(socket_fd, buff, sizeof(buff)); 
-		// bzero(buff, sizeof(buff)); 
 		read(socket_fd, messages, sizeof(messages)); 
 		printf("From Server : %s", messages); 
 	} 

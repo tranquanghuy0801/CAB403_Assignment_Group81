@@ -2,17 +2,18 @@
  *  Group 81 - DS Assignment 
  * 	Quang Huy Tran - n10069275 
  *  Tuan Minh Nguyen - 
- *  Ho Fong Law - 
+ *  Ho Fong Law - n1010321
  * */
 
 #include <netdb.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <sys/types.h>
+#include <sys/types.h
 #include <sys/socket.h>
 #include <unistd.h>
 #define MAX 1024
+
 
 int main(int argc, char *argv[]) {
 	int socket_fd;

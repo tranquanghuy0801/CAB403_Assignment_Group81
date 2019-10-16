@@ -13,282 +13,238 @@
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
+#include "helper.h"
 #include <unistd.h>
 #define MAX 1024
 #define BACKLOG 10
-
-typedef struct message message_t;
+int my_port = 0;   // the port of the current client, initalized when MSG_UP returns
+int isRunning = 1; // for LIVEFEED exit
 
 // temporary struct that saves new message on each channel
-struct message
-{
-	char *text;
-	int read;
-	message_t *next;
-};
 
-struct Semaphore
-{
-	int value;
+// struct Semaphore
+// {
+// 	int value;
 
-	// q contains all Process Control Blocks(PCBs)
-	// corresponding to processes got blocked
-	// while performing down operation.
-	Queue<process> q;
+// 	// q contains all Process Control Blocks(PCBs)
+// 	// corresponding to processes got blocked
+// 	// while performing down operation.
+// 	Queue<process> q;
 
-}
+// }
 
-typedef struct node node_t;
 
-// temporary struct the saves info of new channel
-typedef struct channel
-{
-	int channelID;
-	int numMessage;
-	int next_used;
-	message_t *message;
-} channel_t;
 
-struct node
-{
-	channel_t *channel;
-	node_t *next;
-};
+// int getCount(struct note_t *head)
+// {
+// 	int count = 0;
+// 	node_t *current = head;
+// 	while (current != NULL)
+// 	{
+// 		count++;
+// 		current = current->next;
+// 	}
+// 	return count;
+// }
 
-message_t *message_add(message_t *head, char *text)
-{
-	// create new node to add to list
-	message_t *new = (message_t *)malloc(sizeof(message_t));
-	if (new == NULL)
-	{
-		return NULL;
-	}
+// void *creat_share_memory(size_t size = 1000 * 1024, key_t key = 5555, struct node_t *head)
+// {
+// 	char c;
+// 	int shmid;
+// 	node_t *shm, *s;
+// 	shm = &head;
 
-	// insert new node
-	new->text = text;
-	new->next = head;
-	new->read = 0;
-	return new;
-}
+// 	//create the segment
 
-int getCount(struct note_t *head)
-{
-	int count = 0;
-	Node *current = head;
-	while (current != NULL)
-	{
-		count++;
-		current = current->next;
-	}
-	return count;
-}
+// 	if ((shmid = shmget(key, size, IPC_CREAT | 0666)) < 0)
+// 	{
+// 		perror("shmget");
+// 		exit(1);
+// 	}
 
-void *creat_share_memory(size_t size = 1000 * 1024, key_t key = 5555, struct node_t *head)
-{
-	char c;
-	int shmid;
-	node_t *shm, *s;
-	shm = &head;
+//   if((shm = shmat(shmid,NULL,0) == (char *) -1
+//     {
+// 		perror("shmat");
+// 		exit(1);
+//     }
+//       // Put somthing to read
+//       s = shm;
 
-	//create the segment
+//       while(head.next != null)
+// 	{
+// 		*s++ = head;
+// 		head = head.next;
+// 	}
+//       *s = 0;
+// }
 
-	if ((shmid = shmget(key, size, IPC_CREAT | 0666)) < 0)
-	{
-		perror("shmget");
-		exit(1);
-	}
+// fork_somthing()
+// {
+// 	//fork somthing that divided into two or more
 
-  if((shm = shmat(shmid,NULL,0) == (char *) -1
-    {
-		perror("shmat");
-		exit(1);
-    }
-      // Put somthing to read
-      s = shm;
+// 	if (fork() == 0)
+// 		printf("Hello from Child!\n");
+// 	//Do somthing that on real work on server-client service
 
-      while(head.next != null)
-	{
-		*s++ = head;
-		head = head.next;
-	}
-      *s = 0;
-}
+// 	// parent process because return value non-zero.
+// 	else{
+// 		printf("Hello from Parent!\n");
+// 	// if the client number is not enought , fork more times
+// 	fork_somthing();
+// 	wait(NULL);
+// 	print("All child process complete");
+// 	}
+// 	return 0;
+// }
 
-fork_somthing()
-{
-	//fork somthing that divided into two or more
+// read_data_form_share_memory(Semaphore s)
+// {
+// 	s.value = s.value - 1;
+// 	if (s.value < 0)
+// 	{
 
-	if (fork() == 0)
-		printf("Hello from Child!\n");
-	//Do somthing that on real work on server-client service
+// 		// add process to queue
+// 		// here p is a process which is currently executing
+// 		q.push(p);
+// 		block();
+// 	}
+// 	else
+// 		return;
+// }
 
-	// parent process because return value non-zero.
-	else{
-		printf("Hello from Parent!\n");
-	// if the client number is not enought , fork more times
-	fork_somthing();
-	wait(NULL);
-	print("All child process complete");
-	}
-	return 0;
-}
+// write_data_form_share_memory(Semaphore s)
+// {
+// 	s.value = s.value - 1;
+// 	if (s.value < 0)
+// 	{
 
-read_data_form_share_memory(Semaphore s)
-{
-	s.value = s.value - 1;
-	if (s.value < 0)
-	{
+// 		// add process to queue
+// 		// here p is a process which is currently executing
+// 		q.push(p);
+// 		block();
+// 	}
+// 	else
+// 		return;
+// }
 
-		// add process to queue
-		// here p is a process which is currently executing
-		q.push(p);
-		block();
-	}
-	else
-		return;
-}
+// complete_write_data_form_share_memory(Semaphore s)
+// {
+// 	s.value = s.value + 1;
+// 	if (s.value <= 0)
+// 	{
 
-write_data_form_share_memory(Semaphore s)
-{
-	s.value = s.value - 1;
-	if (s.value < 0)
-	{
+// 		// remove process p from queue
+// 		q.pop();
+// 		wakeup(p);
+// 	}
+// 	else
+// 		return;
+// }
 
-		// add process to queue
-		// here p is a process which is currently executing
-		q.push(p);
-		block();
-	}
-	else
-		return;
-}
+// complete_read_data_form_share_memory(Semaphore s)
+// {
+// 	s.value = s.value + 1;
+// 	if (s.value <= 0)
+// 	{
 
-complete_write_data_form_share_memory(Semaphore s)
-{
-	s.value = s.value + 1;
-	if (s.value <= 0)
-	{
+// 		// remove process p from queue
+// 		q.pop();
+// 		wakeup(p);
+// 	}
+// 	else
+// 		return;
+// }
 
-		// remove process p from queue
-		q.pop();
-		wakeup(p);
-	}
-	else
-		return;
-}
-
-complete_read_data_form_share_memory(Semaphore s)
-{
-	s.value = s.value + 1;
-	if (s.value <= 0)
-	{
-
-		// remove process p from queue
-		q.pop();
-		wakeup(p);
-	}
-	else
-		return;
-}
-
-node_t *node_add(node_t *head, channel_t *channel)
-{
-	// create new node to add to list
-	node_t *new = (node_t *)malloc(sizeof(node_t));
-	if (new == NULL)
-	{
-		return NULL;
-	}
-
-	// insert new node
-	new->channel = channel;
-	new->next = head;
-	return new;
-}
-
-node_t *node_find_channel(node_t *head, int channelID)
-{
-	for (; head != NULL; head = head->next)
-	{
-		if (channelID == head->channel->channelID)
-		{
-			return head;
-		}
-	}
-	return NULL;
-}
-
-node_t *node_delete(node_t *head, int channelID)
-{
-	node_t *previous = NULL;
-	node_t *current = head;
-	while (current != NULL)
-	{
-		if (channelID == current->channel->channelID)
-		{
-			node_t *newhead = head;
-			if (previous == NULL) // first item in list
-				newhead = current->next;
-			else
-				previous->next = current->next;
-			free(current);
-			return newhead;
-		}
-		previous = current;
-		current = current->next;
-	}
-
-	// name not found
-	return head;
-}
-
-void set_read_mess(node_t *head, int channel_id)
-{
-	node_t *channel_found = node_find_channel(head, channel_id);
-	for (; channel_found->channel->message != NULL; channel_found->channel->message = channel_found->channel->message->next)
-	{
-		channel_found->channel->message->read = 1;
-	}
-}
-
-char *get_unread_mess(node_t *head)
+char *ReadNextMess(htab_t *hClient, htab_t *hChannel, char *clientID, int channelID)
 {
 	char *mess = (char *)malloc(sizeof(char) * 1024);
-	char *res = (char *)malloc(sizeof(char) * 1024);
-	node_t *channel_found;
-	if (head == NULL)
+	int length = snprintf(NULL, 0, "%d", channelID);
+	char *str2 = malloc(length + 1);
+	snprintf(str2, length + 1, "%d", channelID);
+
+	// size_t bucket = htab_index(hClient, clientID);
+	node_t *channelFound = node_find_channel(hClient, clientID, channelID);
+	int messID = channelFound->messIndex;
+	//printf("ID = %d\n",messID);
+	//Message queue
+	channel_t *messageList = htab_find(hChannel, str2)->messList;
+	message_t *messageQueue = messageList->message;
+	for (; messageQueue != NULL; messageQueue = messageQueue->next)
 	{
-		sprintf(mess, "Not subscrived to any channels\n");
+		if (messageQueue->messIndex == messID)
+		{
+			if (messageQueue->text != NULL)
+			{
+				//printf("%s\n", mess);
+				sprintf(mess,"%s",messageQueue->text);
+				messageList->countRead++;
+				messageList->countUnread--;
+				channelFound->messIndex++;
+				//free(mess);
+			}
+		}
+	}
+	return mess;
+}
+
+char *ReadAllMess(htab_t *hClient, htab_t *hChannel, char *clientID)
+{
+	char *result = (char *)malloc(sizeof(char) * 1024);
+	char *mess = (char *)malloc(sizeof(char) * 1024);
+	// node_t* channels = htab_find(hClient,clientID)->subChannel;
+
+	if (htab_find(hClient, clientID) == NULL)
+	{
+		printf("Not subscribed to any channels\n");
 	}
 	else
 	{
-		for (; head != NULL; head = head->next)
+
+		node_t *channels = htab_find(hClient, clientID)->subChannel;
+		for (; channels != NULL; channels = channels->next)
 		{
-			channel_found = head;
-			for (; channel_found->channel->message != NULL; channel_found->channel->message = channel_found->channel->message->next)
+			int channelID = channels->channelID;
+			int length = snprintf(NULL, 0, "%d", channelID);
+			char *str2 = malloc(length + 1);
+			snprintf(str2, length + 1, "%d", channelID);
+
+			// size_t bucket = htab_index(hClient, clientID);
+			node_t *channelFound = node_find_channel(hClient, clientID, channelID);
+			int messID = channelFound->messIndex;
+			//printf("ID = %d\n",messID);
+			//Message queue
+			channel_t *messageList = htab_find(hChannel, str2)->messList;
+			message_t *i = messageList->message;
+			if (i == NULL)
 			{
-				if (channel_found->channel->message->read == 0)
+				continue;
+			}
+			else
+			{
+				for (message_t *i = messageList->message; i != NULL; i = i->next)
 				{
-					sprintf(mess, "%d:%s\n", channel_found->channel->channelID, channel_found->channel->message->text);
-					res = strcat(res, mess);
-					//printf("%s", mess);
-					channel_found->channel->message->read = 1;
+					if (i->messIndex == messID)
+					{
+						if (i->text != NULL)
+						{
+							sprintf(mess,"%d:%s\n",channelID,i->text);
+							strcat(result,mess);
+							//printf("%d:%s\n", channelID, mess);
+							messageList->countRead++;
+							messageList->countUnread--;
+							channelFound->messIndex++;
+							messID++;
+							//free(mess);
+							// return;
+						}
+					}
 				}
 			}
 		}
 	}
 	free(mess);
-	return res;
+	return result;
 }
-
-typedef struct pthread_arg_t
-{
-	int new_socket_fd;
-	struct sockaddr_in client_address;
-	node_t *channel_list;
-	node_t *channel_list_unsub;
-	/* TODO: Put arguments passed to threads here. See lines 116 and 139. */
-} pthread_arg_t;
 
 /* Thread routine to serve connection to client. */
 void *pthread_routine(void *arg);
@@ -304,8 +260,23 @@ int main(int argc, char *argv[])
 	pthread_arg_t *pthread_arg;
 	pthread_t pthread;
 	socklen_t client_address_len;
-	node_t *channel_list = NULL;
-	node_t *channel_list_unsub = NULL;
+	//Hash tables
+	htab_t hClient;
+	htab_t hChannel;
+	int buckets = 5;
+	//Initialize client hashtable
+	if (!htab_init(&hClient, buckets))
+	{
+		printf("failed to initialise hash table\n");
+		return EXIT_FAILURE;
+	}
+
+	//Initialize channel hashtable
+	if (!htab_init(&hChannel, buckets))
+	{
+		printf("failed to initialise hash table\n");
+		return EXIT_FAILURE;
+	}
 	/* Get port from command line arguments or stdin. */
 	if (argc != 2)
 	{
@@ -326,6 +297,9 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 	puts("Socket created");
+	int length = snprintf(NULL, 0, "%d", socket_fd);
+	char *str = malloc(length + 1);
+	snprintf(str, length + 1, "%d", socket_fd);
 
 	/* Bind address to socket. */
 	if (bind(socket_fd, (struct sockaddr *)&address, sizeof address) == -1)
@@ -398,8 +372,9 @@ int main(int argc, char *argv[])
 
 		/* Initialise pthread argument. */
 		pthread_arg->new_socket_fd = new_socket_fd;
-		pthread_arg->channel_list = channel_list;
-		pthread_arg->channel_list_unsub = channel_list_unsub;
+		pthread_arg->hChannel = hChannel;
+		pthread_arg->hClient = hClient;
+		pthread_arg->str = str;
 		/* TODO: Initialise arguments passed to threads here. See lines 22 and
 	 * 139.
 	 */
@@ -425,8 +400,9 @@ void *pthread_routine(void *arg)
 {
 	pthread_arg_t *pthread_arg = (pthread_arg_t *)arg;
 	int new_socket_fd = pthread_arg->new_socket_fd;
-	node_t *channel_list = pthread_arg->channel_list;
-	node_t *channel_list_unsub = pthread_arg->channel_list_unsub;
+	htab_t hClient = pthread_arg->hClient;
+	htab_t hChannel = pthread_arg->hChannel;
+	char *str = pthread_arg->str;
 	struct sockaddr_in client_address = pthread_arg->client_address;
 	/* TODO: Get arguments passed to threads here. See lines 22 and 116. */
 
@@ -438,6 +414,8 @@ void *pthread_routine(void *arg)
        */
 	char messages[MAX];
 	int channel_id;
+	
+
 	// infinite loop for chat
 	for (;;)
 	{
@@ -450,31 +428,16 @@ void *pthread_routine(void *arg)
 			if (read(new_socket_fd, &channel_id, sizeof(channel_id)) != -1)
 			{
 				printf("%d\n", channel_id);
-				channel_t *channel_new = (channel_t *)malloc(sizeof(channel_t));
-				if (channel_id >= 0 && channel_id <= 255 && node_find_channel(channel_list, channel_id) == NULL)
+				if (channel_id >= 0 && channel_id <= 255 && (node_find_channel(&hClient, str, channel_id) == NULL))
 				{
-					if (node_find_channel(channel_list_unsub, channel_id) != NULL)
-					{
-						set_read_mess(channel_list_unsub, channel_id);
-						channel_new = node_find_channel(channel_list_unsub, channel_id)->channel;
-					}
-					else
-					{
-						channel_new->channelID = channel_id;
-						channel_new->message = NULL;
-						channel_new->next_used = 0;
-						channel_new->numMessage = 0;
-					}
-					node_t *newhead = node_add(channel_list, channel_new);
-					channel_list = newhead;
+					htab_add_node(&hClient,&hChannel, str, channel_id);
 					sprintf(messages, "Subscribed to channel %d\n", channel_id);
 				}
-				else if (channel_id >= 0 && channel_id <= 255 && node_find_channel(channel_list, channel_id) != NULL)
+				else if (channel_id >= 0 && channel_id <= 255 && (node_find_channel(&hClient, str, channel_id) != NULL))
 				{
 					sprintf(messages, "Already subscribed to channel %d\n", channel_id);
 				}
-				else
-				{
+				else{
 					sprintf(messages, "Invalid channel: %d\n", channel_id);
 				}
 			}
@@ -490,13 +453,12 @@ void *pthread_routine(void *arg)
 			if (read(new_socket_fd, &channel_id, sizeof(channel_id)) != -1)
 			{
 				printf("%d\n", channel_id);
-				if (channel_id >= 0 && channel_id <= 255 && node_find_channel(channel_list, channel_id) != NULL)
+				if (channel_id >= 0 && channel_id <= 255 && node_find_channel(&hClient, str, channel_id) != NULL)
 				{
-					node_t *newhead = node_delete(channel_list, channel_id);
-					channel_list = newhead;
+					htab_delete_node(&hClient, str, channel_id);
 					sprintf(messages, "Unsubscribed from channel %d\n", channel_id);
 				}
-				else if (channel_id >= 0 && channel_id <= 255 && node_find_channel(channel_list, channel_id) == NULL)
+				else if (channel_id >= 0 && channel_id <= 255 && node_find_channel(&hClient, str, channel_id) == NULL)
 				{
 					sprintf(messages, "Not subscribed from channel %d\n", channel_id);
 				}
@@ -520,34 +482,11 @@ void *pthread_routine(void *arg)
 				printf("%d\n", channel_id);
 				if (channel_id >= 0 && channel_id <= 255 && read(new_socket_fd, send_message, 1024) != -1)
 				{
-					if (node_find_channel(channel_list, channel_id) != NULL)
-					{
-						node_t *channel_send = node_find_channel(channel_list, channel_id);
-						message_t *newMess = message_add(channel_send->channel->message, send_message);
-						channel_send->channel->message = newMess;
-						channel_send->channel->numMessage++;
-					}
-					else if (node_find_channel(channel_list_unsub, channel_id) != NULL)
-					{
-						node_t *channel_send = node_find_channel(channel_list_unsub, channel_id);
-						message_t *newMess = message_add(channel_send->channel->message, send_message);
-						channel_send->channel->message = newMess;
-						channel_send->channel->numMessage++;
-					}
-					else
-					{
-						channel_t *channel_new = (channel_t *)malloc(sizeof(channel_t));
-						message_t *newMess = (message_t *)malloc(sizeof(message_t));
-						newMess->text = send_message;
-						newMess->next = NULL;
-						newMess->read = 0;
-						channel_new->channelID = channel_id;
-						channel_new->message = newMess;
-						channel_new->next_used = 0;
-						channel_new->numMessage = 1;
-						node_t *newhead = node_add(channel_list_unsub, channel_new);
-						channel_list_unsub = newhead;
-					}
+					int length = snprintf(NULL, 0, "%d", channel_id);
+					char *str2 = malloc(length + 1);
+					snprintf(str2, length + 1, "%d", channel_id);
+					//Add message to channel(str2), hashtable hChannel
+					htab_add_mess(&hChannel, str2, send_message);
 					sprintf(messages, "Send to channel %d successfully\n", channel_id);
 				}
 				else
@@ -569,26 +508,14 @@ void *pthread_routine(void *arg)
 				printf("%d\n", channel_id);
 				if (channel_id == 265)
 				{
-					sprintf(messages, "%s", get_unread_mess(channel_list));
+					sprintf(messages, "%s",ReadAllMess(&hClient,&hChannel,str));
 				}
-				else if (channel_id >= 0 && channel_id <= 255 && node_find_channel(channel_list, channel_id) != NULL)
+				else if(channel_id >= 0 && channel_id <= 255 && node_find_channel(&hClient,str, channel_id) != NULL)
 				{
-					node_t *channel_found = node_find_channel(channel_list, channel_id);
-					char *mess = (char *)malloc(sizeof(char) * 1024);
-					if (channel_found->channel->message != NULL)
-					{
-						mess = channel_found->channel->message->text;
-						channel_found->channel->message->read = 1;
-						sprintf(messages, "%s\n", mess);
-						channel_found->channel->message = channel_found->channel->message->next;
-					}
-					else
-					{
-						sprintf(messages, "No new messages\n");
-					}
-					free(mess);
+					sprintf(messages, "%s\n", ReadNextMess(&hClient,&hChannel,str,channel_id));
+
 				}
-				else if (channel_id >= 0 && channel_id <= 255 && node_find_channel(channel_list, channel_id) == NULL)
+				else if(channel_id >= 0 && channel_id <= 255 && node_find_channel(&hClient,str, channel_id) == NULL)
 				{
 					sprintf(messages, "Not subscribed to channel %d\n", channel_id);
 				}
@@ -596,6 +523,10 @@ void *pthread_routine(void *arg)
 				{
 					sprintf(messages, "Invalid channel: %d\n", channel_id);
 				}
+			}
+			else
+			{
+				sprintf(messages, "Miss channel ID\n");
 			}
 		}
 		else if (strcmp(messages, "LIVEFEED") == 0)

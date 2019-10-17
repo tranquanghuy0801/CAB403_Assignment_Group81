@@ -167,24 +167,29 @@ char *ReadNextMess(htab_t *hClient, htab_t *hChannel, char *clientID, int channe
 	int messID = channelFound->messIndex;
 	//printf("ID = %d\n",messID);
 	//Message queue
-	channel_t *messageList = htab_find(hChannel, str2)->messList;
-	message_t *messageQueue = messageList->message;
-	for (; messageQueue != NULL; messageQueue = messageQueue->next)
-	{
-		if (messageQueue->messIndex == messID)
+	if(htab_find(hChannel,str2)==NULL){
+		return "No new messages";
+	}
+	else{
+		channel_t *messageList = htab_find(hChannel, str2)->messList;
+		message_t *messageQueue = messageList->message;
+		for (; messageQueue != NULL; messageQueue = messageQueue->next)
 		{
-			if (messageQueue->text != NULL)
+			if (messageQueue->messIndex == messID)
 			{
-				//printf("%s\n", mess);
-				sprintf(mess,"%s",messageQueue->text);
-				messageList->countRead++;
-				messageList->countUnread--;
-				channelFound->messIndex++;
-				//free(mess);
+				if (messageQueue->text != NULL)
+				{
+					//printf("%s\n", mess);
+					sprintf(mess,"%s",messageQueue->text);
+					messageList->countRead++;
+					messageList->countUnread--;
+					channelFound->messIndex++;
+					//free(mess);
+				}
 			}
 		}
+		return mess;
 	}
-	return mess;
 }
 
 char *ReadAllMess(htab_t *hClient, htab_t *hChannel, char *clientID)
@@ -213,6 +218,9 @@ char *ReadAllMess(htab_t *hClient, htab_t *hChannel, char *clientID)
 			int messID = channelFound->messIndex;
 			//printf("ID = %d\n",messID);
 			//Message queue
+			if(htab_find(hChannel,str2)==NULL){
+				continue;  
+			}
 			channel_t *messageList = htab_find(hChannel, str2)->messList;
 			message_t *i = messageList->message;
 			if (i == NULL)
@@ -243,11 +251,16 @@ char *ReadAllMess(htab_t *hClient, htab_t *hChannel, char *clientID)
 		}
 	}
 	free(mess);
-	return result;
+	if(strcmp(result,"")==0){
+		return "No new messages\n";
+	}
+	else{
+		return result;
+	}
 }
 
 /* Thread routine to serve connection to client. */
-void *pthread_routine(void *arg);
+void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str);
 
 /* Signal handler to handle SIGTERM and SIGINT signals. */
 void signal_handler(int signal_number);
@@ -256,9 +269,6 @@ int main(int argc, char *argv[])
 {
 	int socket_fd, new_socket_fd;
 	struct sockaddr_in address;
-	pthread_attr_t pthread_attr;
-	pthread_arg_t *pthread_arg;
-	pthread_t pthread;
 	socklen_t client_address_len;
 	//Hash tables
 	htab_t hClient;
@@ -334,58 +344,23 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	/* Initialise pthread attribute to create detached threads. */
-	if (pthread_attr_init(&pthread_attr) != 0)
-	{
-		perror("pthread_attr_init");
-		exit(1);
-	}
-	if (pthread_attr_setdetachstate(&pthread_attr, PTHREAD_CREATE_DETACHED) != 0)
-	{
-		perror("pthread_attr_setdetachstate");
-		exit(1);
-	}
 
 	while (1)
 	{
-		/* Create pthread argument for each connection to client. */
-		/* TODO: malloc'ing before accepting a connection causes only one small
-	 * memory when the program exits. It can be safely ignored.
-	 */
-		pthread_arg = (pthread_arg_t *)malloc(sizeof *pthread_arg);
-		if (!pthread_arg)
-		{
-			perror("malloc");
-			continue;
-		}
 
 		/* Accept connection to client. */
-		client_address_len = sizeof pthread_arg->client_address;
-		new_socket_fd = accept(socket_fd, (struct sockaddr *)&pthread_arg->client_address, &client_address_len);
+		//client_address_len = sizeof pthread_arg->client_address;
+		struct sockaddr_in client_address;
+		client_address_len = sizeof(client_address);
+		new_socket_fd = accept(socket_fd, (struct sockaddr *)&client_address, &client_address_len);
 		if (new_socket_fd == -1)
 		{
 			perror("accept");
-			free(pthread_arg);
+			//free(pthread_arg);
 			continue;
 		}
 		puts("Connection accepted");
-
-		/* Initialise pthread argument. */
-		pthread_arg->new_socket_fd = new_socket_fd;
-		pthread_arg->hChannel = hChannel;
-		pthread_arg->hClient = hClient;
-		pthread_arg->str = str;
-		/* TODO: Initialise arguments passed to threads here. See lines 22 and
-	 * 139.
-	 */
-
-		/* Create thread to serve connection to client. */
-		if (pthread_create(&pthread, &pthread_attr, pthread_routine, (void *)pthread_arg) != 0)
-		{
-			perror("pthread_create");
-			free(pthread_arg);
-			continue;
-		}
+		main_function(new_socket_fd,hClient,hChannel,str);
 	}
 
 	close(socket_fd);
@@ -396,22 +371,8 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void *pthread_routine(void *arg)
+void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str)
 {
-	pthread_arg_t *pthread_arg = (pthread_arg_t *)arg;
-	int new_socket_fd = pthread_arg->new_socket_fd;
-	htab_t hClient = pthread_arg->hClient;
-	htab_t hChannel = pthread_arg->hChannel;
-	char *str = pthread_arg->str;
-	struct sockaddr_in client_address = pthread_arg->client_address;
-	/* TODO: Get arguments passed to threads here. See lines 22 and 116. */
-
-	free(arg);
-
-	/* TODO: Put client interaction code here. For example, use
-       * write(new_socket_fd,,) and read(new_socket_fd,,) to send and receive
-       * messages with the client.
-       */
 	char messages[MAX];
 	int channel_id;
 	
@@ -543,7 +504,6 @@ void *pthread_routine(void *arg)
 		write(new_socket_fd, messages, 1024);
 	}
 	close(new_socket_fd);
-	return NULL;
 }
 
 void signal_handler(int signal_number)

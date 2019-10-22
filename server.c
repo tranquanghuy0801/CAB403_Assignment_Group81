@@ -259,6 +259,38 @@ char *ReadAllMess(htab_t *hClient, htab_t *hChannel, char *clientID)
 	}
 }
 
+// char *countMess(htab_t *hClient, htab_t *hChannel, char *clientID)
+// {
+// 	char *result = (char *)malloc(sizeof(char) * 1024);
+// 	char *text = (char *)malloc(sizeof(char) * 1024);
+// 	if (htab_find(hClient, clientID) == NULL)
+// 	{
+// 		printf("Not subscribed to any channels\n");
+// 	}
+// 	else{
+// 		node_t *channels = htab_find(hClient, clientID)->subChannel;
+// 		for (; channels != NULL; channels = channels->next)
+// 		{
+// 			int channelID = channels->channelID;
+// 			int length = snprintf(NULL, 0, "%d", channelID);
+// 			char *str2 = malloc(length + 1);
+// 			snprintf(str2, length + 1, "%d", channelID);
+// 			//printf("ID = %d\n",messID);
+// 			//Message queue
+// 			if(htab_find(hChannel,str2)==NULL){
+// 				continue;  
+// 			}
+// 			channel_t *messageList = htab_find(hChannel, str2)->messList;
+// 			sprintf(text,"%d: Total Mess: %d\n",channelID,messageList->countMess);
+			
+// 		}
+
+// 		}
+// 	}
+// }
+
+
+
 /* Thread routine to serve connection to client. */
 void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str);
 
@@ -380,11 +412,11 @@ void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str
 	// infinite loop for chat
 	for (;;)
 	{
-		bzero(messages, MAX);
+		memset(messages,'\0',sizeof(messages));
 		read(new_socket_fd, messages, sizeof(messages));
 		if (strcmp(messages, "SUB") == 0)
 		{
-			bzero(messages, MAX);
+			memset(messages,'\0',sizeof(messages));
 			printf("Found\n");
 			if (read(new_socket_fd, &channel_id, sizeof(channel_id)) != -1)
 			{
@@ -409,7 +441,7 @@ void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str
 		}
 		else if (strcmp(messages, "UNSUB") == 0)
 		{
-			bzero(messages, MAX);
+			memset(messages,'\0',sizeof(messages));
 			printf("Found\n");
 			if (read(new_socket_fd, &channel_id, sizeof(channel_id)) != -1)
 			{
@@ -436,7 +468,7 @@ void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str
 		else if (strcmp(messages, "SEND") == 0)
 		{
 			char *send_message = malloc(sizeof(char) * 1024);
-			bzero(messages, MAX);
+			memset(messages,'\0',sizeof(messages));
 			printf("Found\n");
 			if (read(new_socket_fd, &channel_id, sizeof(channel_id)) != -1)
 			{
@@ -462,7 +494,7 @@ void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str
 		}
 		else if (strcmp(messages, "NEXT") == 0)
 		{
-			bzero(messages, MAX);
+			memset(messages,'\0',sizeof(messages));
 			printf("Found\n");
 			if (read(new_socket_fd, &channel_id, sizeof(channel_id)) != -1)
 			{
@@ -492,13 +524,17 @@ void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str
 		}
 		else if (strcmp(messages, "LIVEFEED") == 0)
 		{
+			memset(messages,'\0',sizeof(messages));
+			printf("Found\n");
+			
 		}
 		else if (strcmp(messages, "CHANNELS") == 0)
 		{
+
 		}
 		else
 		{
-			bzero(messages, MAX);
+			memset(messages,'\0',sizeof(messages));
 			sprintf(messages, "Cannot recognise your command\n");
 		}
 		write(new_socket_fd, messages, 1024);

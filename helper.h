@@ -352,10 +352,6 @@ bool htab_add_mess(htab_t *h, char* key, char *text) {
 		if(newChannel == NULL){
 			return false;
 		}
-
-		
-
-
 		//Insert new item in bucket
 		newhead->key = key;
 		newhead->subChannel = NULL;
@@ -400,12 +396,3 @@ node_t *node_delete(node_t *head, int channelID)
 	return head;
 }
 
-typedef struct pthread_arg_t
-{
-	int new_socket_fd;
-	struct sockaddr_in client_address;
-	htab_t hClient;
-	htab_t hChannel;
-	char *str;
-	/* TODO: Put arguments passed to threads here. See lines 116 and 139. */
-} pthread_arg_t;

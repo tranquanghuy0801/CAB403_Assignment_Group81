@@ -5,12 +5,15 @@
  *  Ho Fong Law - n1010321
  * */
 
-#include <netdb.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h
-#include <sys/socket.h>
+
+#include <stdio.h> 
+#include <stdlib.h> 
+#include <errno.h> 
+#include <string.h> 
+#include <netdb.h> 
+#include <sys/types.h> 
+#include <netinet/in.h> 
+#include <sys/socket.h> 
 #include <unistd.h>
 #define MAX 1024
 
@@ -57,8 +60,8 @@ int main(int argc, char *argv[]) {
 	char messages[MAX];
 	int channel_id;
 	for(;;) { 
-		bzero(buff,sizeof(buff));
-		bzero(messages, sizeof(messages)); 
+		memset(buff,'\0',sizeof(buff));
+		memset(messages,'\0',sizeof(messages)); 
 		printf("Commands: \n\
 			SUB <channelID> -- to subscribe to channel (0-255) \n\
 			UNSUB <channelID> - to unsubscribe to channel (0-255) \n\
@@ -95,8 +98,8 @@ int main(int argc, char *argv[]) {
 			close(socket_fd); 
 			return 0;
 		} 
-		bzero(buff,sizeof(buff));
-		bzero(messages, sizeof(messages));
+		memset(buff,'\0',sizeof(buff));
+		memset(messages,'\0',sizeof(messages));
 		read(socket_fd, messages, 1024); 
 		printf("From Server : %s", messages); 
 	} 

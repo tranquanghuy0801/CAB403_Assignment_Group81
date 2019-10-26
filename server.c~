@@ -15,21 +15,13 @@
 #include <sys/types.h>
 #include <sys/shm.h>
 #include <sys/wait.h>
-#include <sys/ipc.h>
 #include "helper.h"
 #include <unistd.h>
 #define MAX 1024
 #define BACKLOG 10
 int my_port = 0;   // the port of the current client, initalized when MSG_UP returns
 int isRunning = 1; // for LIVEFEED exit
-
-//typedef char char255array[255];
-//typedef char char255array char255by10[10];
-//typedef char char255by10 char2darrayby1024[1024];
-//typedef char2darrayby1024 *ptr;
-
-char channel_mess[255][10][1024];
-
+char *channel_mess[255][10];
 // temporary struct that saves new message on each channel
 // struct Semaphore
 // {
@@ -124,7 +116,7 @@ char channel_mess[255][10][1024];
 // 	s.value = s.value - 1;
 // 	if (s.value < 0)
 // 	{
-	
+
 // 		// add process to queue
 // 		// here p is a process which is currently executing
 // 		q.push(p);
@@ -162,7 +154,7 @@ char channel_mess[255][10][1024];
 // 		return;
 // }
 
-char *ReadNextMess(htab_t *hClient, string hChannel[][10], char *clientID, int channelID)
+char *ReadNextMess(htab_t *hClient, char *hChannel[255][10], char *clientID, int channelID)
 {
 	node_t *channelFound = node_find_channel(hClient, clientID, channelID);
 	int messID = channelFound->messIndex;
@@ -180,7 +172,7 @@ char *ReadNextMess(htab_t *hClient, string hChannel[][10], char *clientID, int c
 	}
 }
 
-char *ReadAllMess(htab_t *hClient, string hChannel[][10], char *clientID)
+char *ReadAllMess(htab_t *hClient, char *hChannel[255][10], char *clientID)
 {
 	char *result = (char *)malloc(sizeof(char) * 1024);
 	char *mess = (char *)malloc(sizeof(char) * 1024);
@@ -223,7 +215,7 @@ char *ReadAllMess(htab_t *hClient, string hChannel[][10], char *clientID)
 }
 
 /* Thread routine to serve connection to client. */
-void main_function(int new_socket_fd, htab_t hClient, char ptr[][10][1024] , char *str);
+void main_function(int new_socket_fd, htab_t hClient, char* channel_mess, char *str);
 
 /* Signal handler to handle SIGTERM and SIGINT signals. */
 void signal_handler(int signal_number);
@@ -240,23 +232,21 @@ int main(int argc, char *argv[])
 
 	key_t ShmKEY = 1234;
 	int ShmID;
-	
-	string (*ptr)[256][10];
-	int texts = 1024;
 	int rows = 256;
 	int columns = 10;
+	char *matrix;
 	int pid;
 
 
-	ShmID = shmget(ShmKEY, sizeof(char[256][10][1024]), IPC_CREAT | 0666);
+	ShmID = shmget(ShmKEY, sizeof(char)*rows*columns, IPC_CREAT | 0666);
 	if (ShmID < 0)
 	{
 		printf("*** shmget error (server) ***\n");
 		exit(1);
 	}
 
-	ptr = shmat(ShmID, NULL, 0);
-	if (*ptr == (void *)(-1))
+	matrix = (char *)shmat(ShmID, NULL, 0);
+	if (matrix == (char*)(-1))
 	{
 		printf("*** shmat error (server) ***\n");
 		exit(1);
@@ -363,7 +353,7 @@ int main(int argc, char *argv[])
 			wait(NULL);
 			printf("Parent\n");
 			close(new_socket_fd);
-			shmdt(ptr);
+			shmdt(matrix);
 			shmctl(ShmID,IPC_RMID,NULL);
 			exit(0);
 		}
@@ -371,7 +361,7 @@ int main(int argc, char *argv[])
 		{
 			close(socket_fd);
 			printf("child\n");
-			main_function(new_socket_fd, hClient,ptr, str);
+			main_function(new_socket_fd, hClient,matrix, str);
 			printf("end main\n");
 		}
 	}
@@ -385,11 +375,9 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void main_function(int new_socket_fd, htab_t hClient, string ptr[][10] , char *str)
+void main_function(int new_socket_fd, htab_t hClient, char* channel_mess, char *str)
 {
 	char messages[MAX];
-
-
 	int channel_id;
 
 	// infinite loop for chat
@@ -406,7 +394,7 @@ void main_function(int new_socket_fd, htab_t hClient, string ptr[][10] , char *s
 				printf("%d\n", channel_id);
 				if (channel_id >= 0 && channel_id <= 255 && (node_find_channel(&hClient, str, channel_id) == NULL))
 				{
-					htab_add_node(&hClient, ptr, str, channel_id);
+					htab_add_node(&hClient, channel_mess, str, channel_id);
 					sprintf(messages, "Subscribed to channel %d\n", channel_id);
 				}
 				else if (channel_id >= 0 && channel_id <= 255 && (node_find_channel(&hClient, str, channel_id) != NULL))

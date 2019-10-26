@@ -6,7 +6,6 @@
  * */
 #include <stdbool.h> // for bool type
 #define C_NAME_LEN 256
-typedef struct string{char x[1024];}string;
 
 typedef struct client_info
 {
@@ -139,12 +138,12 @@ node_t *node_find_channel(htab_t* h, char* key, int channelID)
 // pre: htab_find(h, key) == NULL
 // post: (return == false AND allocation of new item failed)
 //       OR (htab_find(h, key) != NULL)
-bool htab_add_node(htab_t *h, char hChannel[][10][1024], char* key, int channelID) {
+bool htab_add_node(htab_t *h, char* hChannel[255][10], char* key, int channelID) {
 	// hash key and place item in appropriate bucket
 	size_t bucket = htab_index(h, key);
 	//If client already exist
 	if(htab_find(h,key)!=NULL){
-		node_t *new = (node_t *)malloc(sizeof(node_t));
+	  node_t *new = (node_t *)malloc(sizeof(node_t));
 		if (new == NULL)
 		{
 			return NULL;
@@ -260,11 +259,11 @@ void htab_destroy(htab_t *h) {
 
 //}
 
-void message_add(char *text, string channel_mess[260][10],int channelID){
+void message_add(char *text, char* channel_mess[255][10],int channelID){
 	int i;
 	for(i = 0; i < 10;i++){
-		if(channel_mess[channelID][i].x == NULL){
-			*channel_mess[channelID][i] = text;
+		if(channel_mess[channelID][i] == NULL){
+			channel_mess[channelID][i] = text;
 			printf("%s",channel_mess[channelID][i]);
 			break;
 		}

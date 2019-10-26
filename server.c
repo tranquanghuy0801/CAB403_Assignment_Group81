@@ -19,9 +19,11 @@
 #define BACKLOG 10
 int my_port = 0;   // the port of the current client, initalized when MSG_UP returns
 int isRunning = 1; // for LIVEFEED exit
-
+char* channel_mess[255][10];
 // temporary struct that saves new message on each channel
+void read_mess(char* channel_mess[255][10],int channelID){
 
+}
 // struct Semaphore
 // {
 // 	int value;
@@ -155,109 +157,120 @@ int isRunning = 1; // for LIVEFEED exit
 // 		return;
 // }
 
-char *ReadNextMess(htab_t *hClient, htab_t *hChannel, char *clientID, int channelID)
+char *ReadNextMess(htab_t *hClient,char *channel_mess[255][10], char *clientID, int channelID)
 {
-	char *mess = (char *)malloc(sizeof(char) * 1024);
-	int length = snprintf(NULL, 0, "%d", channelID);
-	char *str2 = malloc(length + 1);
-	snprintf(str2, length + 1, "%d", channelID);
-
-	// size_t bucket = htab_index(hClient, clientID);
-	node_t *channelFound = node_find_channel(hClient, clientID, channelID);
+	node_t *channelFound = node_find_channel(hClient,clientID,channelID);
 	int messID = channelFound->messIndex;
-	//printf("ID = %d\n",messID);
-	//Message queue
-	if(htab_find(hChannel,str2)==NULL){
+	if(hChannel[channelID][messID] == NULL){
 		return "No new messages";
 	}
 	else{
-		channel_t *messageList = htab_find(hChannel, str2)->messList;
-		message_t *messageQueue = messageList->message;
-		for (; messageQueue != NULL; messageQueue = messageQueue->next)
-		{
-			if (messageQueue->messIndex == messID)
-			{
-				if (messageQueue->text != NULL)
-				{
-					//printf("%s\n", mess);
-					sprintf(mess,"%s",messageQueue->text);
-					messageList->countRead++;
-					messageList->countUnread--;
-					channelFound->messIndex++;
-					//free(mess);
-				}
-			}
-		}
-		return mess;
+		channelFound->messIndex++;
+		channelFound->countRead++;
+		channelFound->countUnread--;
+		return hChannel[channelID][messID];
 	}
+	// char *mess = (char *)malloc(sizeof(char) * 1024);
+	// int length = snprintf(NULL, 0, "%d", channelID);
+	// char *str2 = malloc(length + 1);
+	// snprintf(str2, length + 1, "%d", channelID);
+
+	// // size_t bucket = htab_index(hClient, clientID);
+	// node_t *channelFound = node_find_channel(hClient, clientID, channelID);
+	// int messID = channelFound->messIndex;
+	// //printf("ID = %d\n",messID);
+	// //Message queue
+	// if(htab_find(hChannel,str2)==NULL){
+	// 	return "No new messages";
+	// }
+	// else{
+	// 	channel_t *messageList = htab_find(hChannel, str2)->messList;
+	// 	message_t *messageQueue = messageList->message;
+	// 	for (; messageQueue != NULL; messageQueue = messageQueue->next)
+	// 	{
+	// 		if (messageQueue->messIndex == messID)
+	// 		{
+	// 			if (messageQueue->text != NULL)
+	// 			{
+	// 				//printf("%s\n", mess);
+	// 				sprintf(mess,"%s",messageQueue->text);
+	// 				messageList->countRead++;
+	// 				messageList->countUnread--;
+	// 				channelFound->messIndex++;
+	// 				//free(mess);
+	// 			}
+	// 		}
+	// 	}
+	// 	return mess;
+	// }
 }
 
-char *ReadAllMess(htab_t *hClient, htab_t *hChannel, char *clientID)
-{
-	char *result = (char *)malloc(sizeof(char) * 1024);
-	char *mess = (char *)malloc(sizeof(char) * 1024);
-	// node_t* channels = htab_find(hClient,clientID)->subChannel;
+// char *ReadAllMess(htab_t *hClient, htab_t *hChannel, char *clientID)
+// {
+// 	char *result = (char *)malloc(sizeof(char) * 1024);
+// 	char *mess = (char *)malloc(sizeof(char) * 1024);
+// 	// node_t* channels = htab_find(hClient,clientID)->subChannel;
 
-	if (htab_find(hClient, clientID) == NULL)
-	{
-		printf("Not subscribed to any channels\n");
-	}
-	else
-	{
+// 	if (htab_find(hClient, clientID) == NULL)
+// 	{
+// 		printf("Not subscribed to any channels\n");
+// 	}
+// 	else
+// 	{
 
-		node_t *channels = htab_find(hClient, clientID)->subChannel;
-		for (; channels != NULL; channels = channels->next)
-		{
-			int channelID = channels->channelID;
-			int length = snprintf(NULL, 0, "%d", channelID);
-			char *str2 = malloc(length + 1);
-			snprintf(str2, length + 1, "%d", channelID);
+// 		node_t *channels = htab_find(hClient, clientID)->subChannel;
+// 		for (; channels != NULL; channels = channels->next)
+// 		{
+// 			int channelID = channels->channelID;
+// 			int length = snprintf(NULL, 0, "%d", channelID);
+// 			char *str2 = malloc(length + 1);
+// 			snprintf(str2, length + 1, "%d", channelID);
 
-			// size_t bucket = htab_index(hClient, clientID);
-			node_t *channelFound = node_find_channel(hClient, clientID, channelID);
-			int messID = channelFound->messIndex;
-			//printf("ID = %d\n",messID);
-			//Message queue
-			if(htab_find(hChannel,str2)==NULL){
-				continue;  
-			}
-			channel_t *messageList = htab_find(hChannel, str2)->messList;
-			message_t *i = messageList->message;
-			if (i == NULL)
-			{
-				continue;
-			}
-			else
-			{
-				for (message_t *i = messageList->message; i != NULL; i = i->next)
-				{
-					if (i->messIndex == messID)
-					{
-						if (i->text != NULL)
-						{
-							sprintf(mess,"%d:%s\n",channelID,i->text);
-							strcat(result,mess);
-							//printf("%d:%s\n", channelID, mess);
-							messageList->countRead++;
-							messageList->countUnread--;
-							channelFound->messIndex++;
-							messID++;
-							//free(mess);
-							// return;
-						}
-					}
-				}
-			}
-		}
-	}
-	free(mess);
-	if(strcmp(result,"")==0){
-		return "No new messages\n";
-	}
-	else{
-		return result;
-	}
-}
+// 			// size_t bucket = htab_index(hClient, clientID);
+// 			node_t *channelFound = node_find_channel(hClient, clientID, channelID);
+// 			int messID = channelFound->messIndex;
+// 			//printf("ID = %d\n",messID);
+// 			//Message queue
+// 			if(htab_find(hChannel,str2)==NULL){
+// 				continue;  
+// 			}
+// 			channel_t *messageList = htab_find(hChannel, str2)->messList;
+// 			message_t *i = messageList->message;
+// 			if (i == NULL)
+// 			{
+// 				continue;
+// 			}
+// 			else
+// 			{
+// 				for (message_t *i = messageList->message; i != NULL; i = i->next)
+// 				{
+// 					if (i->messIndex == messID)
+// 					{
+// 						if (i->text != NULL)
+// 						{
+// 							sprintf(mess,"%d:%s\n",channelID,i->text);
+// 							strcat(result,mess);
+// 							//printf("%d:%s\n", channelID, mess);
+// 							messageList->countRead++;
+// 							messageList->countUnread--;
+// 							channelFound->messIndex++;
+// 							messID++;
+// 							//free(mess);
+// 							// return;
+// 						}
+// 					}
+// 				}
+// 			}
+// 		}
+// 	}
+// 	free(mess);
+// 	if(strcmp(result,"")==0){
+// 		return "No new messages\n";
+// 	}
+// 	else{
+// 		return result;
+// 	}
+// }
 
 // char *countMess(htab_t *hClient, htab_t *hChannel, char *clientID)
 // {
@@ -307,6 +320,7 @@ int main(int argc, char *argv[])
 	htab_t hChannel;
 	int buckets = 5;
 	//Initialize client hashtable
+	//char* channel_mess[255][10] = {{NULL}};
 	if (!htab_init(&hClient, buckets))
 	{
 		printf("failed to initialise hash table\n");
@@ -397,9 +411,9 @@ int main(int argc, char *argv[])
 
 	close(socket_fd);
 	/*
-       * TODO: If you really want to close the socket, you would do it in
-       * signal_handler(), meaning socket_fd would need to be a global variable.
-       */
+	   * TODO: If you really want to close the socket, you would do it in
+	   * signal_handler(), meaning socket_fd would need to be a global variable.
+	   */
 	return 0;
 }
 
@@ -475,11 +489,12 @@ void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str
 				printf("%d\n", channel_id);
 				if (channel_id >= 0 && channel_id <= 255 && read(new_socket_fd, send_message, 1024) != -1)
 				{
-					int length = snprintf(NULL, 0, "%d", channel_id);
-					char *str2 = malloc(length + 1);
-					snprintf(str2, length + 1, "%d", channel_id);
-					//Add message to channel(str2), hashtable hChannel
-					htab_add_mess(&hChannel, str2, send_message);
+					// int length = snprintf(NULL, 0, "%d", channel_id);
+					// char *str2 = malloc(length + 1);
+					// snprintf(str2, length + 1, "%d", channel_id);
+					// //Add message to channel(str2), hashtable hChannel
+					// htab_add_mess(&hChannel, str2, send_message);
+					message_add(send_message,channel_mess,channel_id);
 					sprintf(messages, "Send to channel %d successfully\n", channel_id);
 				}
 				else
@@ -501,12 +516,12 @@ void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str
 				printf("%d\n", channel_id);
 				if (channel_id == 265)
 				{
-					sprintf(messages, "%s",ReadAllMess(&hClient,&hChannel,str));
+					//sprintf(messages, "%s",ReadAllMess(&hClient,&hChannel,str));
 				}
 				else if(channel_id >= 0 && channel_id <= 255 && node_find_channel(&hClient,str, channel_id) != NULL)
 				{
-					sprintf(messages, "%s\n", ReadNextMess(&hClient,&hChannel,str,channel_id));
-
+					//sprintf(messages, "%s\n", ReadNextMess(&hClient,&hChannel,str,channel_id));
+					sprintf(messages, "%s\n", ReadNextMess(&hClient,channel_mess,str,channel_id));
 				}
 				else if(channel_id >= 0 && channel_id <= 255 && node_find_channel(&hClient,str, channel_id) == NULL)
 				{

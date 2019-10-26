@@ -15,7 +15,6 @@ typedef struct client_info
 } client_info_t; // temporary struct that saves the client info in at after doing MSG_WHO
 
 typedef struct message message_t;
-char *hChannel[255][10];
 
 // temporary struct that saves new message on each channel 
 struct message
@@ -37,12 +36,6 @@ struct node
 	node_t *next;
 };
 
-// temporary struct the saves info of new channel 
-typedef struct channel
-{
-	char* text;
-} channel_t;
-
 
 
 void sig_handler(int);
@@ -51,7 +44,6 @@ typedef struct item item_t;
 struct item {
 	char *key;
 	node_t* subChannel;
-	channel_t* messList;
 	item_t *next;
 };
 
@@ -146,7 +138,7 @@ node_t *node_find_channel(htab_t* h, char* key, int channelID)
 // pre: htab_find(h, key) == NULL
 // post: (return == false AND allocation of new item failed)
 //       OR (htab_find(h, key) != NULL)
-bool htab_add_node(htab_t *h, htab_t*h2, char* key, int channelID) {
+bool htab_add_node(htab_t *h, char* hChannel[255][10], char* key, int channelID) {
 	// hash key and place item in appropriate bucket
 	size_t bucket = htab_index(h, key);
 	//If client already exist
@@ -178,7 +170,6 @@ bool htab_add_node(htab_t *h, htab_t*h2, char* key, int channelID) {
 
 		//Insert new item in bucket
 		newhead->key = key;
-		newhead->messList = NULL;
 		newhead->next = h->buckets[bucket];
 		h->buckets[bucket] = newhead;
 		//Insert new node in item
@@ -279,73 +270,28 @@ void message_add(char *text, char* channel_mess[255][10],int channelID){
 }
 
 
-// // // h: hChannel table
-// // // key: channel ID,
-// // // text: message
-// bool htab_add_mess(htab_t *h, char* key, char *text) {
-// 	// hash key and place item in appropriate bucket
-// 	size_t bucket = htab_index(h, key);
-// 	//If client already exist
-// 	if(htab_find(h,key)!=NULL){
-		
-// 	// insert new message
-// 		channel_t *head = h->buckets[bucket]->messList;
-// 		head->countMess++;
-// 		head->countUnread++;
-// 		head->message = message_add(head->message,text);
 
-// 	}
-// 	else{
-// 		// allocate new item
-// 		item_t *newhead = (item_t *)malloc(sizeof(item_t));
-// 		if (newhead == NULL) {
-// 			return false;
-// 		}
-// 		channel_t *newChannel = (channel_t*)malloc(sizeof(channel_t));
-// 		if(newChannel == NULL){
-// 			return false;
-// 		}
-// 		//Insert new item in bucket
-// 		newhead->key = key;
-// 		newhead->subChannel = NULL;
-// 		newhead->next = h->buckets[bucket];
-// 		newChannel->countUnread=1;
-// 		newChannel->countMess=1;
-// 		newChannel->countRead = 0;
-// 		// newChannel->message=NULL;
-// 		newhead->messList = newChannel;
-// 		h->buckets[bucket] = newhead;
-// 		//Insert new node in item
+node_t *node_delete(node_t *head, int channelID)
+{
+	node_t *previous = NULL;
+	node_t *current = head;
+	while (current != NULL)
+	{
+		if (channelID == current->channelID)
+		{
+			node_t *newhead = head;
+			if (previous == NULL) // first item in list
+				newhead = current->next;
+			else
+				previous->next = current->next;
+			free(current);
+			return newhead;
+		}
+		previous = current;
+		current = current->next;
+	}
 
-// 		newhead->messList->message = message_add(newhead->messList->message,text);
-// 	}
-// 	return true;
-// }
-
-
-
-
-// // node_t *node_delete(node_t *head, int channelID)
-// // {
-// // 	node_t *previous = NULL;
-// // 	node_t *current = head;
-// // 	while (current != NULL)
-// // 	{
-// // 		if (channelID == current->channelID)
-// // 		{
-// // 			node_t *newhead = head;
-// // 			if (previous == NULL) // first item in list
-// // 				newhead = current->next;
-// // 			else
-// // 				previous->next = current->next;
-// // 			free(current);
-// // 			return newhead;
-// // 		}
-// // 		previous = current;
-// // 		current = current->next;
-// // 	}
-
-// // 	// name not found
-// // 	return head;
-// // }
+	// name not found
+	return head;
+}
 

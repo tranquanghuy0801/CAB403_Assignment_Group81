@@ -5,7 +5,7 @@
  *  Ho Fong Law - n1010321
  * */
 
-
+#include <arpa/inet.h> 
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <errno.h> 
@@ -30,15 +30,15 @@ int main(int argc, char *argv[]) {
 
 	if ((server_host = gethostbyname(argv[1])) == NULL)
 	{ /* get the host info */
-		herror("gethostbyname");
+		perror("gethostbyname");
 		exit(1);
 	}
 
 	/* Initialise IPv4 server address with server host. */
-	memset(&server_address, 0, sizeof server_address);
 	server_address.sin_family = AF_INET;
 	server_address.sin_port = htons(atoi(argv[2]));
-	memcpy(&server_address.sin_addr.s_addr, server_host->h_addr, server_host->h_length);
+	server_address.sin_addr.s_addr = INADDR_ANY;
+	bzero(&(server_address.sin_zero),8); 
 
 	/* Create TCP socket. */
 	if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {

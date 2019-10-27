@@ -129,9 +129,6 @@ node_t *node_find_channel(htab_t* h, char* key, int channelID)
 		}
 	}
 	return NULL;
-
-
-	return NULL;
 }
 
 // Add a key with value to the hash table.
@@ -185,6 +182,7 @@ bool htab_add_node(htab_t *h, char* hChannel[255][10], char* key, int channelID)
 		while(hChannel[channelID][i] != NULL);
 		h->buckets[bucket]->subChannel->messIndex = i;
 	}
+	return true;
 }
 
 // Delete an item with key from the hash table.

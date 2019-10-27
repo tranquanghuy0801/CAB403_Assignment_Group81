@@ -29,6 +29,8 @@
         "vec4ub": "c",
         "vec4ui": "c",
         "vec4us": "c",
-        "viewport": "c"
+        "viewport": "c",
+        "*.tcc": "c",
+        "system_error": "c"
     }
 }

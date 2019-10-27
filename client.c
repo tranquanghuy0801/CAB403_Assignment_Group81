@@ -9,6 +9,7 @@
 #include <stdio.h> 
 #include <stdlib.h> 
 #include <errno.h> 
+#include <signal.h> 
 #include <string.h> 
 #include <netdb.h> 
 #include <sys/types.h> 
@@ -16,15 +17,35 @@
 #include <sys/socket.h> 
 #include <unistd.h>
 #define MAX 1024
+int isRunning;
+int socket_fd;
+
+void sig_handler(int sig){
+	if(isRunning == 0){
+		printf("Client has been successfully unregistered, closing.\n");
+		exit(0);
+	} else{
+		isRunning = 0;
+		write(socket_fd,&isRunning,sizeof(isRunning));
+
+
+	}
+}
+
 
 
 int main(int argc, char *argv[]) {
-	int socket_fd;
+	//int socket_fd;
+	int port; 
 	struct hostent *server_host;
 	struct sockaddr_in server_address;
-	if (argc != 3)
+	if (argc == 2)
 	{
-		fprintf(stderr, "usage: client_hostname port_number\n");
+		port = 12345;
+		fprintf(stderr, "Using default port:12345\n");
+	}else if (argc >3){
+		port = atoi(argv[2]);
+		fprintf(stderr, "Port number needed\n");
 		exit(1);
 	}
 
@@ -36,7 +57,7 @@ int main(int argc, char *argv[]) {
 
 	/* Initialise IPv4 server address with server host. */
 	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(atoi(argv[2]));
+	server_address.sin_port = htons(port);
 	server_address.sin_addr.s_addr = INADDR_ANY;
 	bzero(&(server_address.sin_zero),8); 
 
@@ -59,7 +80,11 @@ int main(int argc, char *argv[]) {
 	char buff[MAX];
 	char messages[MAX];
 	int channel_id;
+
+	signal(SIGINT,sig_handler);
+	
 	for(;;) { 
+
 		memset(buff,'\0',sizeof(buff));
 		memset(messages,'\0',sizeof(messages)); 
 		printf("Commands: \n\
@@ -86,6 +111,26 @@ int main(int argc, char *argv[]) {
 						printf("%s\n",send_message);
 						write(socket_fd,send_message,1024);
 					}
+				}
+				if(strcmp(messages,"LIVEFEED") == 0){
+					printf("I'm feeding\n");
+					// Send isRunning = 1
+					// While (signal)
+
+					char *read_message = (char *)malloc(sizeof(char) * 1024);
+					isRunning = 1;
+					// do{
+					// 	write(socket_fd,&isRunning,sizeof(isRunning));
+					while(isRunning==1){
+						write(socket_fd, "NEXT", sizeof("NEXT")); 
+						// if(read(socket_fd, read_message, 1024) != -1){
+						// 	printf("%s\n",read_message);
+						// }
+					}
+					// } while(isRunning == 1);
+					
+					
+					
 				}
 			}
 			else{

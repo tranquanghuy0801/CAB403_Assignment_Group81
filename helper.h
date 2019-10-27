@@ -5,7 +5,7 @@
  *  Ho Fong Law - 
  * */
 #include <stdbool.h> // for bool type
-#define NUM_MESS 20 
+#define NUM_MESS 10 
 #define NUM_CHANNELS 256 
 // temporary struct that saves new message on each channel 
 typedef struct string{char x[1024];}string;

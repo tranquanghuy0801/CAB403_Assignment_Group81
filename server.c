@@ -4,7 +4,6 @@
  *  Tuan Minh Nguyen - 
  *  Ho Fong Law - 
  * */
-
 #include <netinet/in.h>
 #include <pthread.h>
 #include <signal.h>
@@ -21,7 +20,8 @@
 #define MAX 1024
 #define BACKLOG 10 
 int total[NUM_CHANNELS] = { 0 };
-int isRunning = 1; // for LIVEFEED exit
+int isRunning; // for LIVEFEED exit
+int running = 1;//for closing program
 string channel_mess[NUM_CHANNELS][NUM_MESS];
 
 char *DisplayStats(htab_t *hClient, string hChannel[NUM_CHANNELS][NUM_MESS], char *clientID)
@@ -56,7 +56,7 @@ char *ReadNextMess(htab_t *hClient,string hChannel[NUM_CHANNELS][NUM_MESS], char
 	int messID = channelFound->messIndex;
 	printf("%d",messID);
 	if(strlen(hChannel[channelID][messID].x) == 0){
-		return "No new messages";
+		return "No new messages\n";
 	}
 	else{
 		channelFound->messIndex++;
@@ -112,9 +112,11 @@ void signal_handler(int signal_number);
 
 int main(int argc, char *argv[])
 {
+	int port;
 	int socket_fd, new_socket_fd;
 	struct sockaddr_in address;
 	socklen_t client_address_len;
+	signal(SIGINT,signal_handler);
 	//Hash tables
 	htab_t hClient;
 	int buckets = 5;
@@ -153,16 +155,19 @@ int main(int argc, char *argv[])
 		return EXIT_FAILURE;
 	}
 	/* Get port from command line arguments or stdin. */
-	if (argc != 2)
+	if (argc < 2)
 	{
-		fprintf(stderr, "usage: client port_number\n");
-		exit(1);
+		port = 12345;
+		fprintf(stderr, "Using default port:12345\n");
+	}else if(argc > 2){
+		port = atoi(argv[1]);
+		fprintf(stderr, "Port number needed\n");
 	}
 
 	/* Initialise IPv4 address. */
 	memset(&address, 0, sizeof address);
 	address.sin_family = AF_INET;
-	address.sin_port = htons(atoi(argv[1]));
+	address.sin_port = htons(port);
 	address.sin_addr.s_addr = INADDR_ANY;
 
 	/* Create TCP socket. */
@@ -209,7 +214,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	while (1)
+	while (running)
 	{
 		/* Accept connection to client. */
 		//client_address_len = sizeof pthread_arg->client_address;
@@ -243,6 +248,7 @@ int main(int argc, char *argv[])
 	   * TODO: If you really want to close the socket, you would do it in
 	   * signal_handler(), meaning socket_fd would need to be a global variable.
 	   */
+	  shmdt(ptr);
 	return 0;
 }
 
@@ -367,6 +373,32 @@ void main_function(int new_socket_fd, htab_t hClient, string channel_mess[NUM_CH
 		{
 			memset(messages,'\0',sizeof(messages));
 			printf("Found\n");
+			if (read(new_socket_fd, &channel_id, sizeof(channel_id)) != -1)
+			{
+				printf("%d\n", channel_id);
+				isRunning = 1; 
+				if (channel_id == 265)
+				{
+
+				} 
+				else if(channel_id >= 0 && channel_id <= 255 && node_find_channel(&hClient,str, channel_id) != NULL)
+				{
+					isRunning=1;
+					while(isRunning == 1)
+					{
+						read(new_socket_fd,&isRunning,sizeof(isRunning));
+						sprintf(messages, "%s\n", ReadNextMess(&hClient,channel_mess,str,channel_id));
+						write(new_socket_fd, messages, 1024);
+					} 
+				}
+				else
+				{
+					sprintf(messages, "Invalid channel: %d\n", channel_id);
+				}
+			}else
+			{
+				sprintf(messages, "Error in receiving the data\n");
+			}
 			
 		}
 		else if (strcmp(messages, "CHANNELS") == 0)
@@ -399,5 +431,6 @@ void main_function(int new_socket_fd, htab_t hClient, string channel_mess[NUM_CH
 void signal_handler(int signal_number)
 {
 	/* TODO: Put exit cleanup code here. */
+	running=0;
 	exit(0);
 }

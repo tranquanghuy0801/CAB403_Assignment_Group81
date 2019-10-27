@@ -1,12 +1,14 @@
-INCLUDE_FILES = helper.h
-BUILD_FILES = server.c client.c
-TARGET_FILES = server client
+CC = c99 
+CFLAGS = -Wall  
 
-CC = gcc
+all: client server 
+	echo "Compile Done."
 
-all: $(BUILD_FILES) $(INCLUDE_FILES)
-	$(CC) server.c -o server -lpthread -std=c99 
-	$(CC) client.c -o client -lpthread -std=c99
+server.o client.o: helper.h 
 
-clean: 
-	rm -f $(TARGET_FILES)
+both: server.o client.o 
+
+clean:
+	rm -f both
+	rm -f *.o 
+.PHONY: all clean 

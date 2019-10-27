@@ -5,40 +5,21 @@
  *  Ho Fong Law - 
  * */
 #include <stdbool.h> // for bool type
-#define C_NAME_LEN 256
-
-typedef struct client_info
-{
-	char m_name[C_NAME_LEN + 1];
-	in_addr_t address;
-	in_port_t port;
-} client_info_t; // temporary struct that saves the client info in at after doing MSG_WHO
-
-typedef struct message message_t;
 
 // temporary struct that saves new message on each channel 
-struct message
-{
-	char *text;
-	int messIndex;
-	message_t *next;
-};
+typedef struct string{char x[1024];}string;
 
 typedef struct node node_t;
 struct node
 {
 	int channelID;
+	int startPoint;
 	int messIndex;
 	int countMess; // count messages since the start of the server
 	int countRead; // count messages that have been read by client
-	int countUnread ;// count message that have not yet been read
-	message_t *message;
+	int countUnread ;// count message that have not yet been read 
 	node_t *next;
 };
-
-
-
-void sig_handler(int);
 
 typedef struct item item_t;
 struct item {
@@ -135,7 +116,7 @@ node_t *node_find_channel(htab_t* h, char* key, int channelID)
 // pre: htab_find(h, key) == NULL
 // post: (return == false AND allocation of new item failed)
 //       OR (htab_find(h, key) != NULL)
-bool htab_add_node(htab_t *h, char* hChannel[255][10], char* key, int channelID) {
+bool htab_add_node(htab_t *h, string hChannel[256][10], char* key, int channelID) {
 	// hash key and place item in appropriate bucket
 	size_t bucket = htab_index(h, key);
 	//If client already exist
@@ -175,11 +156,13 @@ bool htab_add_node(htab_t *h, char* hChannel[255][10], char* key, int channelID)
 		newhead->subChannel = new;
 	}
 	int i = 0;
-	if(hChannel[channelID][i] == NULL){
+	if(strlen(hChannel[channelID][i].x) == 0){
+		h->buckets[bucket]->subChannel->startPoint = i;
 		h->buckets[bucket]->subChannel->messIndex = i;
 	} else{
 		do{i++;}
-		while(hChannel[channelID][i] != NULL);
+		while(strlen(hChannel[channelID][i].x) != 0);
+		h->buckets[bucket]->subChannel->startPoint = i;
 		h->buckets[bucket]->subChannel->messIndex = i;
 	}
 	return true;
@@ -252,16 +235,13 @@ void htab_destroy(htab_t *h) {
 	h->size = 0;
 }
 
-// message_t* message_add(int channelID, char *text){
 
-//}
-
-void message_add(char *text, char* channel_mess[255][10],int channelID){
+void message_add(char *text, string channel_mess[256][10],int channelID){
 	int i;
 	for(i = 0; i < 10;i++){
-		if(channel_mess[channelID][i] == NULL){
-			channel_mess[channelID][i] = text;
-			printf("%s",channel_mess[channelID][i]);
+		if(strlen(channel_mess[channelID][i].x) == 0){
+			strcpy(channel_mess[channelID][i].x,text);
+			printf("%s",channel_mess[channelID][i].x);
 			break;
 		}
 	}

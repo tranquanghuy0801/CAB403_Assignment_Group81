@@ -73,7 +73,7 @@ int main(int argc, char *argv[]) {
 			BYE - to exit the connection with server \n\n:");
 		scanf("%s",messages);
 		write(socket_fd, messages, sizeof(messages)); 
-		if(strcmp(messages,"SUB") == 0 || strcmp(messages,"UNSUB") == 0 || strcmp(messages,"NEXT") == 0 || strcmp(messages,"LIVEFEED") == 0 || strcmp(messages,"SEND") == 0){
+		if(strcmp(messages,"SUB") == 0 || strcmp(messages,"UNSUB") == 0 || strcmp(messages,"NEXT") == 0 || strcmp(messages,"LIVEFEED") == 0 || strcmp(messages,"SEND") == 0 || strcmp(messages,"CHANNELS") == 0){
 			fgets(buff,MAX,stdin);
 			if (sscanf(buff,"%d",&channel_id) == 1)
 			{
@@ -90,6 +90,9 @@ int main(int argc, char *argv[]) {
 			}
 			else{
 				channel_id = 265;
+				if(strcmp(messages,"CHANNELS") == 0){
+					printf("Channel  Total  Read Unread\n");
+				}
 				write(socket_fd,&channel_id,sizeof(channel_id));
 			}
 		}
@@ -101,7 +104,7 @@ int main(int argc, char *argv[]) {
 		memset(buff,'\0',sizeof(buff));
 		memset(messages,'\0',sizeof(messages));
 		read(socket_fd, messages, 1024); 
-		printf("From Server : %s", messages); 
+		printf("%s", messages); 
 	} 
 
 

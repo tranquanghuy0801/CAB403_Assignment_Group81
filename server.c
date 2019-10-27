@@ -10,6 +10,9 @@
 #include <signal.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <sys/shm.h>
+#include <sys/wait.h>
+#include <sys/ipc.h>
 #include <string.h>
 #include <sys/socket.h>
 #include <sys/types.h>
@@ -17,160 +20,61 @@
 #include <unistd.h>
 #define MAX 1024
 #define BACKLOG 10
-int my_port = 0;   // the port of the current client, initalized when MSG_UP returns
+int total[256];
 int isRunning = 1; // for LIVEFEED exit
-char* channel_mess[255][10];
-// temporary struct that saves new message on each channel
-// struct Semaphore
-// {
-// 	int value;
+string channel_mess[256][10];
 
-// 	// q contains all Process Control Blocks(PCBs)
-// 	// corresponding to processes got blocked
-// 	// while performing down operation.
-// 	Queue<process> q;
+char *DisplayStats(htab_t *hClient, string hChannel[256][10], char *clientID)
+{
+	char *result = (char *)malloc(sizeof(char) * 1024);
+	char *mess = (char *)malloc(sizeof(char) * 1024);
+	if (htab_find(hClient, clientID) == NULL)
+	{
+		printf("Not subscribed to any channels\n");
+	} else{
+		node_t *channels = htab_find(hClient, clientID)->subChannel;
+		for(; channels != NULL; channels = channels->next)
+		{
+			int channelID = channels->channelID;
+			sprintf(mess,"%d \t%d \t %d \t%d\n",channelID,total[channelID],channels->countRead,total[channelID]-channels->countRead-channels->startPoint);
+			strcat(result,mess);
+		}
+		// int channelID;
+		// node_t *channels = htab_find(hClient, clientID)->subChannel;
+		// for(channelID = 0; channelID < 10; channelID++)
+		// {
+		// 	node_t *channelFound = node_find_channel(hClient,clientID,channelID);
+		// 	sprintf(mess,"%d \t%d \t %d \t%d\n",channelID,total[channelID],channelFound->countRead,total[channelID]-channelFound->countRead-channelFound->startPoint);
+		// 	strcat(result,mess);
+		// }
+	}
+	free(mess);
+	if(strcmp(result,"")==0){
+		return "No messages in channels\n";
+	}
+	else{
+		return result;
+	}
+}
 
-// }
 
-
-
-// int getCount(struct note_t *head)
-// {
-// 	int count = 0;
-// 	node_t *current = head;
-// 	while (current != NULL)
-// 	{
-// 		count++;
-// 		current = current->next;
-// 	}
-// 	return count;
-// }
-
-// void *creat_share_memory(size_t size = 1000 * 1024, key_t key = 5555, struct node_t *head)
-// {
-// 	char c;
-// 	int shmid;
-// 	node_t *shm, *s;
-// 	shm = &head;
-
-// 	//create the segment
-
-// 	if ((shmid = shmget(key, size, IPC_CREAT | 0666)) < 0)
-// 	{
-// 		perror("shmget");
-// 		exit(1);
-// 	}
-
-//   if((shm = shmat(shmid,NULL,0) == (char *) -1
-//     {
-// 		perror("shmat");
-// 		exit(1);
-//     }
-//       // Put somthing to read
-//       s = shm;
-
-//       while(head.next != null)
-// 	{
-// 		*s++ = head;
-// 		head = head.next;
-// 	}
-//       *s = 0;
-// }
-
-// fork_somthing()
-// {
-// 	//fork somthing that divided into two or more
-
-// 	if (fork() == 0)
-// 		printf("Hello from Child!\n");
-// 	//Do somthing that on real work on server-client service
-
-// 	// parent process because return value non-zero.
-// 	else{
-// 		printf("Hello from Parent!\n");
-// 	// if the client number is not enought , fork more times
-// 	fork_somthing();
-// 	wait(NULL);
-// 	print("All child process complete");
-// 	}
-// 	return 0;
-// }
-
-// read_data_form_share_memory(Semaphore s)
-// {
-// 	s.value = s.value - 1;
-// 	if (s.value < 0)
-// 	{
-
-// 		// add process to queue
-// 		// here p is a process which is currently executing
-// 		q.push(p);
-// 		block();
-// 	}
-// 	else
-// 		return;
-// }
-
-// write_data_form_share_memory(Semaphore s)
-// {
-// 	s.value = s.value - 1;
-// 	if (s.value < 0)
-// 	{
-
-// 		// add process to queue
-// 		// here p is a process which is currently executing
-// 		q.push(p);
-// 		block();
-// 	}
-// 	else
-// 		return;
-// }
-
-// complete_write_data_form_share_memory(Semaphore s)
-// {
-// 	s.value = s.value + 1;
-// 	if (s.value <= 0)
-// 	{
-
-// 		// remove process p from queue
-// 		q.pop();
-// 		wakeup(p);
-// 	}
-// 	else
-// 		return;
-// }
-
-// complete_read_data_form_share_memory(Semaphore s)
-// {
-// 	s.value = s.value + 1;
-// 	if (s.value <= 0)
-// 	{
-
-// 		// remove process p from queue
-// 		q.pop();
-// 		wakeup(p);
-// 	}
-// 	else
-// 		return;
-// }
-
-char *ReadNextMess(htab_t *hClient,char *hChannel[255][10], char *clientID, int channelID)
+char *ReadNextMess(htab_t *hClient,string hChannel[256][10], char *clientID, int channelID)
 {
 	node_t *channelFound = node_find_channel(hClient,clientID,channelID);
 	int messID = channelFound->messIndex;
 	printf("%d",messID);
-	if(hChannel[channelID][messID] == NULL){
+	if(strlen(hChannel[channelID][messID].x) == 0){
 		return "No new messages";
 	}
 	else{
 		channelFound->messIndex++;
 		channelFound->countRead++;
 		channelFound->countUnread--;
-		return hChannel[channelID][messID];
+		return hChannel[channelID][messID].x;
 	}
 }
 
-char *ReadAllMess(htab_t *hClient, char *hChannel[255][10], char *clientID)
+char *ReadAllMess(htab_t *hClient, string hChannel[256][10], char *clientID)
 {
 	char *result = (char *)malloc(sizeof(char) * 1024);
 	char *mess = (char *)malloc(sizeof(char) * 1024);
@@ -187,8 +91,8 @@ char *ReadAllMess(htab_t *hClient, char *hChannel[255][10], char *clientID)
 			int channelID = channels->channelID;
 			int messIndex = channels->messIndex;
 			for(i = messIndex; i < 10;i++){
-				if(hChannel[channelID][i] != NULL){
-					sprintf(mess,"%d:%s\n",channelID,hChannel[channelID][i]);
+				if(strlen(hChannel[channelID][i].x) != 0){
+					sprintf(mess,"%d:%s\n",channelID,hChannel[channelID][i].x);
 					strcat(result,mess);
 					channels->messIndex++;
 				}
@@ -209,7 +113,7 @@ char *ReadAllMess(htab_t *hClient, char *hChannel[255][10], char *clientID)
 
 
 /* Thread routine to serve connection to client. */
-void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str);
+void main_function(int new_socket_fd, htab_t hClient,  string channel_mess[256][10], char *str);
 
 /* Signal handler to handle SIGTERM and SIGINT signals. */
 void signal_handler(int signal_number);
@@ -223,6 +127,33 @@ int main(int argc, char *argv[])
 	htab_t hClient;
 	htab_t hChannel;
 	int buckets = 5;
+
+	key_t ShmKEY = 1234;
+	int ShmID;
+	
+	string (*ptr)[256][10];
+	int texts = 1024;
+	int rows = 256;
+	int columns = 10;
+	int pid;
+
+	ShmID = shmget(ShmKEY, sizeof(char[256][10][1024]), IPC_CREAT | 0666);
+	if (ShmID < 0)
+	{
+		printf("*** shmget error (server) ***\n");
+		exit(1);
+	}
+
+	ptr = shmat(ShmID, NULL, 0);
+	if (*ptr == (void *)(-1))
+	{
+		printf("*** shmat error (server) ***\n");
+		exit(1);
+	}
+
+
+
+	printf("Server has attached the shared memory...\n");
 	//Initialize client hashtable
 	//char* channel_mess[255][10] = {{NULL}};
 	if (!htab_init(&hClient, buckets))
@@ -310,7 +241,7 @@ int main(int argc, char *argv[])
 			continue;
 		}
 		puts("Connection accepted");
-		main_function(new_socket_fd,hClient,hChannel,str);
+		main_function(new_socket_fd,hClient,channel_mess,str);
 	}
 
 	close(socket_fd);
@@ -321,7 +252,7 @@ int main(int argc, char *argv[])
 	return 0;
 }
 
-void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str)
+void main_function(int new_socket_fd, htab_t hClient, string channel_mess[256][10], char *str)
 {
 	char messages[MAX];
 	int channel_id;
@@ -393,11 +324,7 @@ void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str
 				printf("%d\n", channel_id);
 				if (channel_id >= 0 && channel_id <= 255 && read(new_socket_fd, send_message, 1024) != -1)
 				{
-					// int length = snprintf(NULL, 0, "%d", channel_id);
-					// char *str2 = malloc(length + 1);
-					// snprintf(str2, length + 1, "%d", channel_id);
-					// //Add message to channel(str2), hashtable hChannel
-					// htab_add_mess(&hChannel, str2, send_message);
+					total[channel_id]++;
 					message_add(send_message,channel_mess,channel_id);
 					sprintf(messages, "Send to channel %d successfully\n", channel_id);
 				}
@@ -449,6 +376,19 @@ void main_function(int new_socket_fd, htab_t hClient, htab_t hChannel, char *str
 		}
 		else if (strcmp(messages, "CHANNELS") == 0)
 		{
+			memset(messages,'\0',sizeof(messages));
+			printf("Found\n");
+			if (read(new_socket_fd, &channel_id, sizeof(channel_id)) != -1)
+			{
+				printf("%d\n", channel_id);
+				if (channel_id == 265)
+				{
+					sprintf(messages, "%s",DisplayStats(&hClient,channel_mess,str));
+				}
+			}else
+			{
+				sprintf(messages, "Error in receiving the data\n");
+			}
 
 		}
 		else

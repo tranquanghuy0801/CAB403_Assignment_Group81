@@ -27,12 +27,8 @@ void sig_handler(int sig){
 	} else{
 		isRunning = 0;
 		write(socket_fd,&isRunning,sizeof(isRunning));
-
-
 	}
 }
-
-
 
 int main(int argc, char *argv[]) {
 	//int socket_fd;
@@ -122,10 +118,10 @@ int main(int argc, char *argv[]) {
 					// do{
 					// 	write(socket_fd,&isRunning,sizeof(isRunning));
 					while(isRunning==1){
-						write(socket_fd, "NEXT", sizeof("NEXT")); 
-						// if(read(socket_fd, read_message, 1024) != -1){
-						// 	printf("%s\n",read_message);
-						// }
+						//write(socket_fd, "NEXT", sizeof("NEXT")); 
+						while(read(socket_fd, read_message, 1024) != -1){
+							printf("%s\n",read_message);
+						}
 					}
 					// } while(isRunning == 1);
 					

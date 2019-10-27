@@ -1,5 +1,5 @@
 CC = c99 
-CFLAGS = -Wall  
+CFLAGS = -Wall  -lpthread 
 
 all: client server 
 	echo "Compile Done."

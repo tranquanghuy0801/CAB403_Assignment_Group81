@@ -23,7 +23,9 @@ int total[NUM_CHANNELS] = { 0 };
 int isRunning; // for LIVEFEED exit
 int running = 1;//for closing program
 string channel_mess[NUM_CHANNELS][NUM_MESS];
+pthread_mutex_t mutex; 
 
+// Function to display CHANNELS command 
 char *DisplayStats(htab_t *hClient, string hChannel[NUM_CHANNELS][NUM_MESS], char *clientID)
 {
 	char *result = (char *)malloc(sizeof(char) * 1024);
@@ -49,7 +51,7 @@ char *DisplayStats(htab_t *hClient, string hChannel[NUM_CHANNELS][NUM_MESS], cha
 	}
 }
 
-
+// Function for command NEXT <channelID> 
 char *ReadNextMess(htab_t *hClient,string hChannel[NUM_CHANNELS][NUM_MESS], char *clientID, int channelID)
 {
 	node_t *channelFound = node_find_channel(hClient,clientID,channelID);
@@ -66,6 +68,7 @@ char *ReadNextMess(htab_t *hClient,string hChannel[NUM_CHANNELS][NUM_MESS], char
 	}
 }
 
+// Function for command NEXT 
 char *ReadAllMess(htab_t *hClient, string hChannel[NUM_CHANNELS][NUM_MESS], char *clientID)
 {
 	char *result = (char *)malloc(sizeof(char) * 1024);
@@ -122,9 +125,11 @@ int main(int argc, char *argv[])
 	int buckets = 5;
 
 	key_t ShmKEY = 1234;
-	int ShmID;
+	int ShmID, ShmID_2;
 	
 	string (*ptr)[NUM_MESS];
+	pthread_mutex_t * mutexPtr; 
+
 	int texts = 1024;
 	int rows = NUM_CHANNELS;
 	int columns = NUM_MESS;
@@ -144,7 +149,15 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
+	ShmID_2 = shmget(ShmKEY,sizeof(pthread_mutex_t),IPC_CREAT | 0666);
 
+	mutexPtr = shmat(ShmID_2,NULL,0);
+
+	// Initialize mutex 
+	pthread_mutexattr_t attr;
+	pthread_mutexattr_init(&attr);
+	pthread_mutexattr_setpshared(&attr,PTHREAD_PROCESS_SHARED);
+	pthread_mutex_init(mutexPtr,&attr);
 
 	printf("Server has attached the shared memory...\n");
 	//Initialize client hashtable
@@ -217,14 +230,12 @@ int main(int argc, char *argv[])
 	while (running)
 	{
 		/* Accept connection to client. */
-		//client_address_len = sizeof pthread_arg->client_address;
 		struct sockaddr_in client_address;
 		client_address_len = sizeof(client_address);
 		new_socket_fd = accept(socket_fd, (struct sockaddr *)&client_address, &client_address_len);
 		if (new_socket_fd == -1)
 		{
 			perror("accept");
-			//free(pthread_arg);
 			continue;
 		}
 		puts("Connection accepted");
@@ -317,6 +328,7 @@ void main_function(int new_socket_fd, htab_t hClient, string channel_mess[NUM_CH
 		}
 		else if (strcmp(messages, "SEND") == 0)
 		{
+			pthread_mutex_lock(&mutex);
 			char *send_message = malloc(sizeof(char) * 1024);
 			memset(messages,'\0',sizeof(messages));
 			printf("Found\n");
@@ -338,6 +350,7 @@ void main_function(int new_socket_fd, htab_t hClient, string channel_mess[NUM_CH
 			{
 				sprintf(messages, "Miss channel ID\n");
 			}
+			pthread_mutex_unlock(&mutex);
 		}
 		else if (strcmp(messages, "NEXT") == 0)
 		{
@@ -380,22 +393,25 @@ void main_function(int new_socket_fd, htab_t hClient, string channel_mess[NUM_CH
 				if (channel_id == 265)
 				{
 
-				} 
-				else if(channel_id >= 0 && channel_id <= 255 && node_find_channel(&hClient,str, channel_id) != NULL)
+				} else if(channel_id >= 0 && channel_id <= 255 && node_find_channel(&hClient,str, channel_id) != NULL)
 				{
 					isRunning=1;
 					while(isRunning == 1)
 					{
 						read(new_socket_fd,&isRunning,sizeof(isRunning));
 						sprintf(messages, "%s\n", ReadNextMess(&hClient,channel_mess,str,channel_id));
-						write(new_socket_fd, messages, 1024);
+						if(strstr(messages,"No new messages\n") == NULL)
+						{
+							write(new_socket_fd, messages, 1024);
+						}
 					} 
-				}
-				else
+				} else if(channel_id >= 0 && channel_id <= 255 && node_find_channel(&hClient,str, channel_id) == NULL)
 				{
+					sprintf(messages, "Not subscribed to channel %d\n", channel_id);
+				} else{
 					sprintf(messages, "Invalid channel: %d\n", channel_id);
 				}
-			}else
+			} else
 			{
 				sprintf(messages, "Error in receiving the data\n");
 			}
@@ -432,5 +448,6 @@ void signal_handler(int signal_number)
 {
 	/* TODO: Put exit cleanup code here. */
 	running=0;
+	printf("\nEXIT SERVER");
 	exit(0);
 }

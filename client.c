@@ -39,116 +39,121 @@ int main(int argc, char *argv[]) {
 	{
 		port = 12345;
 		fprintf(stderr, "Using default port:12345\n");
-	}else if (argc >3){
+	}
+	else if(argc==3){
 		port = atoi(argv[2]);
+	}
+	else if (argc > 3){
+		//port = atoi(argv[2]);
 		fprintf(stderr, "Port number needed\n");
 		exit(1);
 	}
 
+
 	if ((server_host = gethostbyname(argv[1])) == NULL)
 	{ /* get the host info */
 		perror("gethostbyname");
-		exit(1);
-	}
+	exit(1);
+}
 
 	/* Initialise IPv4 server address with server host. */
-	server_address.sin_family = AF_INET;
-	server_address.sin_port = htons(port);
-	server_address.sin_addr.s_addr = INADDR_ANY;
-	bzero(&(server_address.sin_zero),8); 
+server_address.sin_family = AF_INET;
+server_address.sin_port = htons(port);
+server_address.sin_addr.s_addr = INADDR_ANY;
+bzero(&(server_address.sin_zero),8); 
 
 	/* Create TCP socket. */
-	if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
-		perror("socket");
-		exit(1);
-	}
+if ((socket_fd = socket(AF_INET, SOCK_STREAM, 0)) == -1) {
+	perror("socket");
+	exit(1);
+}
 
 	/* Connect to socket with server address. */
-	if (connect(socket_fd, (struct sockaddr *)&server_address, sizeof server_address) == -1) {
-		perror("connect");
-		exit(1);
-	}
+if (connect(socket_fd, (struct sockaddr *)&server_address, sizeof server_address) == -1) {
+	perror("connect");
+	exit(1);
+}
 
 	/* TODO: Put server interaction code here. For example, use
 	 * write(socket_fd,,) and read(socket_fd,,) to send and receive messages
 	 * with the client.
 	 */
-	char buff[MAX];
-	char messages[MAX];
-	int channel_id;
+char buff[MAX];
+char messages[MAX];
+int channel_id;
 
-	signal(SIGINT,sig_handler);
-	
-	for(;;) { 
+signal(SIGINT,sig_handler);
 
-		memset(buff,'\0',sizeof(buff));
-		memset(messages,'\0',sizeof(messages)); 
-		printf("Commands: \n\
-			SUB <channelID> -- to subscribe to channel (0-255) \n\
-			UNSUB <channelID> - to unsubscribe to channel (0-255) \n\
-			SEND <channelID> <message> - to send the message to a given channel \n\
-			NEXT <channelID> - to display the next unread message on a given channel\n\
-			NEXT - display the next unread messages on all subscribed channles\n\
-			LIVEFEED <channelID> - to display messages continuously in a given channel \n\
-			LIVEFEED - to display messages continously across all channels\n\
-			BYE - to exit the connection with server \n\n:");
-		scanf("%s",messages);
-		write(socket_fd, messages, sizeof(messages)); 
-		if(strcmp(messages,"SUB") == 0 || strcmp(messages,"UNSUB") == 0 || strcmp(messages,"NEXT") == 0 || strcmp(messages,"LIVEFEED") == 0 || strcmp(messages,"SEND") == 0 || strcmp(messages,"CHANNELS") == 0){
-			fgets(buff,MAX,stdin);
-			if (sscanf(buff,"%d",&channel_id) == 1)
-			{
-				printf("%d\n",channel_id);
-				write(socket_fd,&channel_id,sizeof(channel_id));
-				if(strcmp(messages,"SEND") == 0){
-					char *send_message = (char *)malloc(sizeof(char) * 1024);
-					if(sscanf(buff,"%[^\n]%*c", send_message) == 1){
-						send_message+=3;
-						printf("%s\n",send_message);
-						write(socket_fd,send_message,1024);
-					}
+for(;;) { 
+
+	memset(buff,'\0',sizeof(buff));
+	memset(messages,'\0',sizeof(messages)); 
+	printf("Commands: \n\
+		SUB <channelID> -- to subscribe to channel (0-255) \n\
+		UNSUB <channelID> - to unsubscribe to channel (0-255) \n\
+		SEND <channelID> <message> - to send the message to a given channel \n\
+		NEXT <channelID> - to display the next unread message on a given channel\n\
+		NEXT - display the next unread messages on all subscribed channles\n\
+		LIVEFEED <channelID> - to display messages continuously in a given channel \n\
+		LIVEFEED - to display messages continously across all channels\n\
+		BYE - to exit the connection with server \n\n:");
+	scanf("%s",messages);
+	write(socket_fd, messages, sizeof(messages)); 
+	if(strcmp(messages,"SUB") == 0 || strcmp(messages,"UNSUB") == 0 || strcmp(messages,"NEXT") == 0 || strcmp(messages,"LIVEFEED") == 0 || strcmp(messages,"SEND") == 0 || strcmp(messages,"CHANNELS") == 0){
+		fgets(buff,MAX,stdin);
+		if (sscanf(buff,"%d",&channel_id) == 1)
+		{
+			printf("%d\n",channel_id);
+			write(socket_fd,&channel_id,sizeof(channel_id));
+			if(strcmp(messages,"SEND") == 0){
+				char *send_message = (char *)malloc(sizeof(char) * 1024);
+				if(sscanf(buff,"%[^\n]%*c", send_message) == 1){
+					send_message+=3;
+					printf("%s\n",send_message);
+					write(socket_fd,send_message,1024);
 				}
-				if(strcmp(messages,"LIVEFEED") == 0){
-					printf("I'm feeding\n");
+			}
+			if(strcmp(messages,"LIVEFEED") == 0){
+				printf("I'm feeding\n");
 					// Send isRunning = 1
 					// While (signal)
 
-					char *read_message = (char *)malloc(sizeof(char) * 1024);
-					isRunning = 1;
+				char *read_message = (char *)malloc(sizeof(char) * 1024);
+				isRunning = 1;
 					// do{
 					// 	write(socket_fd,&isRunning,sizeof(isRunning));
-					while(isRunning==1){
+				while(isRunning==1){
 						//write(socket_fd, "NEXT", sizeof("NEXT")); 
-						while(read(socket_fd, read_message, 1024) != -1){
-							printf("%s\n",read_message);
-						}
+					while(read(socket_fd, read_message, 1024) != -1){
+						printf("%s\n",read_message);
 					}
+				}
 					// } while(isRunning == 1);
-					
-					
-					
-				}
-			}
-			else{
-				channel_id = 265;
-				if(strcmp(messages,"CHANNELS") == 0){
-					printf("Channel  Total  Read Unread\n");
-				}
-				write(socket_fd,&channel_id,sizeof(channel_id));
+
+
+
 			}
 		}
-		if ((strncmp(messages,"BYE", 4)) == 0) { 
-			printf("Client Exit...\n");
-			close(socket_fd); 
-			return 0;
-		} 
-		memset(buff,'\0',sizeof(buff));
-		memset(messages,'\0',sizeof(messages));
-		read(socket_fd, messages, 1024); 
-		printf("%s", messages); 
+		else{
+			channel_id = 265;
+			if(strcmp(messages,"CHANNELS") == 0){
+				printf("Channel  Total  Read Unread\n");
+			}
+			write(socket_fd,&channel_id,sizeof(channel_id));
+		}
+	}
+	if ((strncmp(messages,"BYE", 4)) == 0) { 
+		printf("Client Exit...\n");
+		close(socket_fd); 
+		return 0;
 	} 
+	memset(buff,'\0',sizeof(buff));
+	memset(messages,'\0',sizeof(messages));
+	read(socket_fd, messages, 1024); 
+	printf("%s", messages); 
+} 
 
 
-	close(socket_fd);
-	return 0;
+close(socket_fd);
+return 0;
 }

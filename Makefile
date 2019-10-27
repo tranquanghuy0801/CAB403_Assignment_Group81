@@ -4,11 +4,15 @@ CFLAGS = -Wall  -lpthread
 all: client server 
 	echo "Compile Done."
 
-server.o client.o: helper.h 
+server: server.o 
+	gcc -o server -pthread -std=c99 server.o 
 
-both: server.o client.o 
+client: client.o 
+	gcc -o client -pthread -std=c99 client.o 
+
 
 clean:
-	rm -f both
+	rm -f server client 
 	rm -f *.o 
+	
 .PHONY: all clean 

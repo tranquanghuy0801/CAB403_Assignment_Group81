@@ -129,10 +129,6 @@ int main(int argc, char *argv[])
 	
 	string (*ptr)[NUM_MESS];
 	pthread_mutex_t * mutexPtr; 
-
-	int texts = 1024;
-	int rows = NUM_CHANNELS;
-	int columns = NUM_MESS;
 	int pid;
 
 	ShmID = shmget(ShmKEY, sizeof(char[NUM_CHANNELS][NUM_MESS][1024]), IPC_CREAT | 0666);
@@ -172,7 +168,7 @@ int main(int argc, char *argv[])
 	{
 		port = 12345;
 		fprintf(stderr, "Using default port:12345\n");
-	}else if(argc > 2){
+	}else if(argc == 2){
 		port = atoi(argv[1]);
 		fprintf(stderr, "Port number needed\n");
 	}
@@ -227,7 +223,7 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-	while (running)
+	while (1)
 	{
 		/* Accept connection to client. */
 		struct sockaddr_in client_address;

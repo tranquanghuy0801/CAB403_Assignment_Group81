@@ -20,7 +20,7 @@
 #include <unistd.h>
 #define MAX 1024
 #define BACKLOG 10
-int total[256];
+int total[256] = { 0 };
 int isRunning = 1; // for LIVEFEED exit
 string channel_mess[256][10];
 
@@ -39,14 +39,6 @@ char *DisplayStats(htab_t *hClient, string hChannel[256][10], char *clientID)
 			sprintf(mess,"%d \t%d \t %d \t%d\n",channelID,total[channelID],channels->countRead,total[channelID]-channels->countRead-channels->startPoint);
 			strcat(result,mess);
 		}
-		// int channelID;
-		// node_t *channels = htab_find(hClient, clientID)->subChannel;
-		// for(channelID = 0; channelID < 10; channelID++)
-		// {
-		// 	node_t *channelFound = node_find_channel(hClient,clientID,channelID);
-		// 	sprintf(mess,"%d \t%d \t %d \t%d\n",channelID,total[channelID],channelFound->countRead,total[channelID]-channelFound->countRead-channelFound->startPoint);
-		// 	strcat(result,mess);
-		// }
 	}
 	free(mess);
 	if(strcmp(result,"")==0){
@@ -131,7 +123,7 @@ int main(int argc, char *argv[])
 	key_t ShmKEY = 1234;
 	int ShmID;
 	
-	string (*ptr)[256][10];
+	string (*ptr)[10];
 	int texts = 1024;
 	int rows = 256;
 	int columns = 10;
@@ -225,10 +217,8 @@ int main(int argc, char *argv[])
 		exit(1);
 	}
 
-
 	while (1)
 	{
-
 		/* Accept connection to client. */
 		//client_address_len = sizeof pthread_arg->client_address;
 		struct sockaddr_in client_address;
@@ -241,7 +231,19 @@ int main(int argc, char *argv[])
 			continue;
 		}
 		puts("Connection accepted");
-		main_function(new_socket_fd,hClient,channel_mess,str);
+		if ((pid = fork()) == -1)
+		{
+			printf("Fork not working");
+			close(new_socket_fd);
+			continue;
+		}
+		else if (pid == 0) // if pid is child
+		{
+			close(socket_fd);
+			printf("child\n");
+			main_function(new_socket_fd, hClient,ptr, str);
+			printf("end main\n");
+		}
 	}
 
 	close(socket_fd);
@@ -251,6 +253,7 @@ int main(int argc, char *argv[])
 	   */
 	return 0;
 }
+
 
 void main_function(int new_socket_fd, htab_t hClient, string channel_mess[256][10], char *str)
 {

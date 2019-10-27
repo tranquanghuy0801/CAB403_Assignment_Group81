@@ -19,12 +19,12 @@
 #include "helper.h"
 #include <unistd.h>
 #define MAX 1024
-#define BACKLOG 10
-int total[256] = { 0 };
+#define BACKLOG 10 
+int total[NUM_CHANNELS] = { 0 };
 int isRunning = 1; // for LIVEFEED exit
-string channel_mess[256][10];
+string channel_mess[NUM_CHANNELS][NUM_MESS];
 
-char *DisplayStats(htab_t *hClient, string hChannel[256][10], char *clientID)
+char *DisplayStats(htab_t *hClient, string hChannel[NUM_CHANNELS][NUM_MESS], char *clientID)
 {
 	char *result = (char *)malloc(sizeof(char) * 1024);
 	char *mess = (char *)malloc(sizeof(char) * 1024);
@@ -50,7 +50,7 @@ char *DisplayStats(htab_t *hClient, string hChannel[256][10], char *clientID)
 }
 
 
-char *ReadNextMess(htab_t *hClient,string hChannel[256][10], char *clientID, int channelID)
+char *ReadNextMess(htab_t *hClient,string hChannel[NUM_CHANNELS][NUM_MESS], char *clientID, int channelID)
 {
 	node_t *channelFound = node_find_channel(hClient,clientID,channelID);
 	int messID = channelFound->messIndex;
@@ -66,7 +66,7 @@ char *ReadNextMess(htab_t *hClient,string hChannel[256][10], char *clientID, int
 	}
 }
 
-char *ReadAllMess(htab_t *hClient, string hChannel[256][10], char *clientID)
+char *ReadAllMess(htab_t *hClient, string hChannel[NUM_CHANNELS][NUM_MESS], char *clientID)
 {
 	char *result = (char *)malloc(sizeof(char) * 1024);
 	char *mess = (char *)malloc(sizeof(char) * 1024);
@@ -105,7 +105,7 @@ char *ReadAllMess(htab_t *hClient, string hChannel[256][10], char *clientID)
 
 
 /* Thread routine to serve connection to client. */
-void main_function(int new_socket_fd, htab_t hClient,  string channel_mess[256][10], char *str);
+void main_function(int new_socket_fd, htab_t hClient,  string channel_mess[NUM_CHANNELS][NUM_MESS], char *str);
 
 /* Signal handler to handle SIGTERM and SIGINT signals. */
 void signal_handler(int signal_number);
@@ -117,19 +117,18 @@ int main(int argc, char *argv[])
 	socklen_t client_address_len;
 	//Hash tables
 	htab_t hClient;
-	htab_t hChannel;
 	int buckets = 5;
 
 	key_t ShmKEY = 1234;
 	int ShmID;
 	
-	string (*ptr)[10];
+	string (*ptr)[NUM_MESS];
 	int texts = 1024;
-	int rows = 256;
-	int columns = 10;
+	int rows = NUM_CHANNELS;
+	int columns = NUM_MESS;
 	int pid;
 
-	ShmID = shmget(ShmKEY, sizeof(char[256][10][1024]), IPC_CREAT | 0666);
+	ShmID = shmget(ShmKEY, sizeof(char[NUM_CHANNELS][NUM_MESS][1024]), IPC_CREAT | 0666);
 	if (ShmID < 0)
 	{
 		printf("*** shmget error (server) ***\n");
@@ -149,13 +148,6 @@ int main(int argc, char *argv[])
 	//Initialize client hashtable
 	//char* channel_mess[255][10] = {{NULL}};
 	if (!htab_init(&hClient, buckets))
-	{
-		printf("failed to initialise hash table\n");
-		return EXIT_FAILURE;
-	}
-
-	//Initialize channel hashtable
-	if (!htab_init(&hChannel, buckets))
 	{
 		printf("failed to initialise hash table\n");
 		return EXIT_FAILURE;
@@ -255,7 +247,7 @@ int main(int argc, char *argv[])
 }
 
 
-void main_function(int new_socket_fd, htab_t hClient, string channel_mess[256][10], char *str)
+void main_function(int new_socket_fd, htab_t hClient, string channel_mess[NUM_CHANNELS][NUM_MESS], char *str)
 {
 	char messages[MAX];
 	int channel_id;

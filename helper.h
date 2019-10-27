@@ -5,7 +5,8 @@
  *  Ho Fong Law - 
  * */
 #include <stdbool.h> // for bool type
-
+#define NUM_MESS 20 
+#define NUM_CHANNELS 256 
 // temporary struct that saves new message on each channel 
 typedef struct string{char x[1024];}string;
 
@@ -116,7 +117,7 @@ node_t *node_find_channel(htab_t* h, char* key, int channelID)
 // pre: htab_find(h, key) == NULL
 // post: (return == false AND allocation of new item failed)
 //       OR (htab_find(h, key) != NULL)
-bool htab_add_node(htab_t *h, string hChannel[256][10], char* key, int channelID) {
+bool htab_add_node(htab_t *h, string hChannel[NUM_CHANNELS][NUM_MESS], char* key, int channelID) {
 	// hash key and place item in appropriate bucket
 	size_t bucket = htab_index(h, key);
 	//If client already exist
@@ -236,7 +237,7 @@ void htab_destroy(htab_t *h) {
 }
 
 
-void message_add(char *text, string channel_mess[256][10],int channelID){
+void message_add(char *text, string channel_mess[NUM_CHANNELS][NUM_MESS],int channelID){
 	int i;
 	for(i = 0; i < 10;i++){
 		if(strlen(channel_mess[channelID][i].x) == 0){
